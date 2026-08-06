@@ -34,9 +34,10 @@ jobs:
         with:
           path: .
 
+      # deploy-pages は待ち時間の上限が10分でハードコードされており
+      # （MAX_TIMEOUT = 600000、入力値は Math.min で切り捨てられる）、延長できない。
+      # 同じアカウントの他リポジトリが Pages をデプロイ中だと順番待ちが長引き、
+      # この10分を超えて中断されることがある。その場合は再実行する。
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
-        with:
-          # Pages 側のキュー待ちが既定の10分を超えて中断されることがあるため延ばす
-          timeout: 1800000
