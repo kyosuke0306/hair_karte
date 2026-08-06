@@ -186,7 +186,7 @@
     closeSheetPicker();
     if (window.HeadMap) HeadMap.close();
     releaseURLs();
-    var hash = location.hash || '#/list';
+    var hash = location.hash || '#/sheets';
     var parts = hash.replace(/^#\//, '').split('/');
     var view = parts[0] || 'list';
     var id = parts[1] || null;
@@ -201,10 +201,14 @@
     });
 
     // 追加ボタンは「カルテ」と「注文シート」でだけ出す
-    fabTarget = group === 'sheets' ? '#/sheet-new' : '#/new';
+    fabTarget = group === 'list' ? '#/new' : '#/sheet-new';
     fab.hidden = !(group === 'list' || group === 'sheets') ||
       view === 'new' || view === 'edit' || view === 'sheet-new' || view === 'sheet-edit';
-    fab.title = group === 'sheets' ? '新しい注文シートを追加' : '新しいカルテを追加';
+    fab.title = group === 'list' ? '新しいカルテを追加' : '新しい注文シートを追加';
+
+    // 見せる画面ではヘッダーやタブを隠して、内容だけにする
+    document.body.classList.toggle('is-showing', view === 'show');
+    keepAwake(view === 'show');
     window.scrollTo(0, 0);
 
     if (view === 'detail' && id) return renderDetail(id);
@@ -214,9 +218,11 @@
     if (view === 'sheet' && id) return renderSheetDetail(id);
     if (view === 'sheet-new') return renderSheetForm(null);
     if (view === 'sheet-edit' && id) return renderSheetForm(id);
+    if (view === 'show' && id) return renderShow(id);
+    if (view === 'list') return renderList();
     if (view === 'stats') return renderStats();
     if (view === 'settings') return renderSettings();
-    return renderList();
+    return renderSheets();
   }
 
   function mount(tplId) {
@@ -437,6 +443,10 @@
 
     root.querySelector('[data-action="copy-order"]').addEventListener('click', function () {
       copyText(sheet || '（注文の記録がありません）');
+    });
+
+    root.querySelector('[data-action="show"]').addEventListener('click', function () {
+      go('#/show/' + r.id);
     });
 
     root.querySelector('[data-action="delete"]').addEventListener('click', function () {
@@ -988,6 +998,80 @@
     }
   }
 
+  /* ---------------- 美容師さんに見せる画面 ---------------- */
+
+  var wakeLock = null;
+
+  /** 見せている間は画面が消えないようにする（対応していない端末では何もしない） */
+  function keepAwake(on) {
+    if (!navigator.wakeLock) return;
+    if (on) {
+      if (wakeLock) return;
+      navigator.wakeLock.request('screen').then(function (w) {
+        wakeLock = w;
+        w.addEventListener('release', function () { wakeLock = null; });
+      }).catch(function () { /* 取れなくても表示には影響しない */ });
+    } else if (wakeLock) {
+      wakeLock.release().catch(function () {});
+      wakeLock = null;
+    }
+  }
+
+  /** 注文シートでもカルテでも見せられるように、両方から探す */
+  function findOrder(id) {
+    return state.sheets.filter(function (x) { return x.id === id; })[0] ||
+      state.records.filter(function (x) { return x.id === id; })[0] || null;
+  }
+
+  function renderShow(id) {
+    var o = findOrder(id);
+    if (!o) { go('#/sheets'); return; }
+
+    mount('tpl-show');
+    var root = main;
+
+    root.querySelector('[data-f="title"]').textContent =
+      o.name || o.styleName || '髪型の注文';
+    root.querySelector('[data-f="sub"]').textContent =
+      [o.name ? o.styleName : '', o.lengthGenre].filter(Boolean).join('　・　');
+
+    HeadMap.render(root.querySelector('#show-headmap'), o, { editable: false });
+
+    // 美容師さんが順に読める並びにする
+    var rows = [
+      ['サイド', o.sideMm],
+      ['もみあげ', o.sideburnMm],
+      ['バック', o.backMm],
+      ['刈り上げの高さ', o.fadeHeight],
+      ['トップ', o.topLen],
+      ['前髪', o.frontLen],
+      ['量感', o.thinning],
+      ['パーマ', o.perm],
+      ['カラー', o.color]
+    ].filter(function (r) { return r[1]; });
+
+    root.querySelector('[data-f="specs"]').innerHTML = rows.length
+      ? rows.map(function (r) {
+          return '<div class="showlist__row"><dt>' + esc(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd></div>';
+        }).join('')
+      : '<p class="muted">指定はまだありません。</p>';
+
+    if (o.orderNote) {
+      root.querySelector('[data-f="note"]').hidden = false;
+      root.querySelector('[data-f="notetext"]').innerHTML = esc(o.orderNote).replace(/\n/g, '<br>');
+    }
+
+    var refs = photosOf(o.id, 'ref');
+    if (refs.length) {
+      root.querySelector('[data-f="photos"]').hidden = false;
+      drawThumbs(root.querySelector('[data-f="photolist"]'), refs, '');
+    }
+
+    root.querySelector('[data-action="close-show"]').addEventListener('click', function () {
+      history.length > 1 ? history.back() : go('#/sheets');
+    });
+  }
+
   /* ---------------- 注文シート ---------------- */
 
   function renderSheets() {
@@ -1062,6 +1146,10 @@
     root.querySelector('[data-action="edit-sheet"]').addEventListener('click', function () { go('#/sheet-edit/' + sh.id); });
     root.querySelector('[data-action="copy-order"]').addEventListener('click', function () {
       copyText(text || '（内容がありません）');
+    });
+
+    root.querySelector('[data-action="show"]').addEventListener('click', function () {
+      go('#/show/' + sh.id);
     });
 
     root.querySelector('[data-action="use-sheet"]').addEventListener('click', function () {

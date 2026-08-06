@@ -101,6 +101,15 @@
     <path d="M6.5 6.5l.8 12.2a1.5 1.5 0 001.5 1.4h6.4a1.5 1.5 0 001.5-1.4l.8-12.2"/>
   </symbol>
 
+  <symbol id="i-show" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/>
+    <circle cx="12" cy="12" r="3"/>
+  </symbol>
+
+  <symbol id="i-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+    <path d="M6 6l12 12M18 6L6 18"/>
+  </symbol>
+
   <symbol id="i-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">
     <path d="M12 21.5s7-6.2 7-11.5a7 7 0 10-14 0c0 5.3 7 11.5 7 11.5z"/>
     <circle cx="12" cy="10" r="2.6"/>
@@ -131,13 +140,13 @@
 </button>
 
 <nav class="tabbar" id="tabs">
-  <a class="tab" href="#/list" data-view="list">
-    <svg class="ico tab__ico" aria-hidden="true"><use href="#i-karte"></use></svg>
-    <span class="tab__label">カルテ</span>
-  </a>
   <a class="tab" href="#/sheets" data-view="sheets">
     <svg class="ico tab__ico" aria-hidden="true"><use href="#i-sheet"></use></svg>
     <span class="tab__label">注文シート</span>
+  </a>
+  <a class="tab" href="#/list" data-view="list">
+    <svg class="ico tab__ico" aria-hidden="true"><use href="#i-karte"></use></svg>
+    <span class="tab__label">カルテ</span>
   </a>
   <a class="tab" href="#/stats" data-view="stats">
     <svg class="ico tab__ico" aria-hidden="true"><use href="#i-chart"></use></svg>
@@ -404,6 +413,38 @@
   </section>
 </template>
 
+<template id="tpl-show">
+  <section class="show">
+    <div class="show__bar">
+      <p class="show__hint">美容師さんに見せる画面です</p>
+      <button class="btn btn--ghost" data-action="close-show">
+        <svg class="ico" aria-hidden="true"><use href="#i-close"></use></svg>閉じる
+      </button>
+    </div>
+
+    <div class="show__body">
+      <header class="show__head">
+        <h1 class="show__title" data-f="title"></h1>
+        <p class="show__sub" data-f="sub"></p>
+      </header>
+
+      <div id="show-headmap" class="show__map"></div>
+
+      <dl class="showlist" data-f="specs"></dl>
+
+      <section class="show__note" data-f="note" hidden>
+        <h2 class="show__label">お願いしたいこと</h2>
+        <p data-f="notetext"></p>
+      </section>
+
+      <section class="show__photos" data-f="photos" hidden>
+        <h2 class="show__label">参考の写真</h2>
+        <div class="thumbs thumbs--show" data-f="photolist"></div>
+      </section>
+    </div>
+  </section>
+</template>
+
 <template id="tpl-sheets">
   <section class="view">
     <div class="view-head">
@@ -460,6 +501,13 @@
     <article class="detail">
       <h2 class="detail__style" data-f="name"></h2>
       <p class="detail__meta" data-f="meta"></p>
+
+      <div class="showcta">
+        <button class="btn btn--primary btn--block btn--show" data-action="show">
+          <svg class="ico" aria-hidden="true"><use href="#i-show"></use></svg>美容師さんに見せる
+        </button>
+        <p class="showcta__note">大きな文字と図で表示します。そのまま画面を渡せます。</p>
+      </div>
 
       <section class="panel panel--order">
         <div class="panel__head">
@@ -519,6 +567,7 @@
       <section class="panel panel--order">
         <div class="panel__head">
           <h3 class="panel__title">注文の仕方</h3>
+          <button class="btn btn--small" data-action="show"><svg class="ico" aria-hidden="true"><use href="#i-show"></use></svg>見せる</button>
           <button class="btn btn--small" data-action="copy-order"><svg class="ico" aria-hidden="true"><use href="#i-copy"></use></svg>注文シートをコピー</button>
         </div>
 
