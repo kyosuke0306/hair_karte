@@ -83,6 +83,9 @@
 
 * { box-sizing: border-box; }
 
+/* hidden 属性は必ず効かせる（display を指定したクラスに負けないように） */
+[hidden] { display: none !important; }
+
 /* ============ アイコン ============ */
 .sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
 
@@ -499,7 +502,6 @@ body.is-showing .main { max-width: 720px; padding: 0; }
 .card--sheet .card__style { font-size: 16px; }
 .card__go { color: var(--text-muted); transform: rotate(180deg); display: flex; }
 
-.pasterow { margin: 0 0 14px; }
 
 .picklist { display: grid; gap: 8px; margin: 14px 0 4px; }
 
@@ -606,6 +608,42 @@ body.is-showing .main { max-width: 720px; padding: 0; }
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+.panel__from {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+/* ---- カルテに貼り付けた注文シート ---- */
+.usedsheet__none { display: grid; gap: 8px; }
+.usedsheet__lead { font-size: 13px; color: var(--text-muted); line-height: 1.7; margin-bottom: 2px; }
+
+.usedsheet__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.usedsheet__title { min-width: 0; }
+
+.usedsheet__label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: .06em;
+}
+
+.usedsheet__name { font-size: 16px; font-weight: 700; overflow-wrap: anywhere; }
+.usedsheet__btns { display: flex; gap: 6px; flex: 0 0 auto; }
+.usedsheet .notebox { margin-top: 12px; }
 
 .speclist { margin-top: 12px; }
 

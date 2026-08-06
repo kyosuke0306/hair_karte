@@ -411,6 +411,12 @@
 
     var sheet = orderSheet(r);
 
+    if (r.sheetName) {
+      var from = root.querySelector('[data-f="sheetname"]');
+      from.hidden = false;
+      from.innerHTML = icon('sheet') + '<span>注文シート「' + esc(r.sheetName) + '」</span>';
+    }
+
     HeadMap.render(root.querySelector('#detail-headmap'), r, { editable: false });
 
     // 図に出ない項目だけを一覧で補う
@@ -578,16 +584,12 @@
     }
 
     setupStars(form, Number(form.elements.rating.value) || 0);
-    setupHeadMap(form);
-    setupStyleSelect(form);
     setupMapLink(form);
-
-    form.querySelector('[data-action="paste-sheet"]')
-      .addEventListener('click', function () { openSheetPicker(form, photoBox); });
+    var used = setupUsedSheet(form, photoBox);
 
     // 「このシートでカルテを作る」から来たとき
     if (!editId && pendingSheet) {
-      var n = applySheetToForm(form, pendingSheet, photoBox);
+      var n = used.apply(pendingSheet);
       toast('「' + (pendingSheet.name || '注文シート') + '」の内容を入れました' +
         (n ? '（写真' + n + '枚も）' : ''));
       pendingSheet = null;
@@ -628,6 +630,8 @@
         color: form.elements.color.value.trim(),
         styling: form.elements.styling.value.trim(),
         orderNote: form.elements.orderNote.value.trim(),
+        sheetId: form.elements.sheetId.value,
+        sheetName: form.elements.sheetName.value,
         rating: Number(form.elements.rating.value) || 0,
         good: form.elements.good.value.trim(),
         bad: form.elements.bad.value.trim(),
@@ -1097,8 +1101,9 @@
     var text = form.elements.styleName;
     if (!sel || !text) return;
 
-    // 過去に使ったスタイルを候補の先頭に足す
+    // 過去に使ったスタイルを候補の先頭に足す（注文シート・カルテのどちらからも）
     var used = {};
+    state.sheets.forEach(function (s) { if (s.styleName) used[s.styleName] = true; });
     state.records.forEach(function (r) { if (r.styleName) used[r.styleName] = true; });
     var og = form.querySelector('#og-used');
     var names = Object.keys(used);
@@ -1541,27 +1546,93 @@
   }
 
   /* 注文シートをカルテのフォームに写す */
-  function applySheetToForm(form, sh, photoBox) {
-    ORDER_FIELDS.forEach(function (k) {
-      if (form.elements[k]) form.elements[k].value = sh[k] == null ? '' : sh[k];
-    });
-    setupHeadMap(form);
-    setupStyleSelect(form);
-    // 折りたたみの中に値が入ったときは開いておく
-    form.querySelectorAll('details').forEach(function (d) {
-      var filled = Array.prototype.some.call(d.querySelectorAll('input, textarea, select'), function (el) {
-        return el.value && el.value.trim();
+  /**
+   * カルテ側の「使った注文シート」。
+   * 髪型の注文は注文シートタブでしか作れないので、ここでは貼り付けて中身を見せるだけ。
+   * 値は隠しフィールドに写しとるため、あとでシートを直してもカルテの記録は変わらない。
+   */
+  function setupUsedSheet(form, photoBox) {
+    var box = form.querySelector('[data-f="usedsheet"]');
+    var none = form.querySelector('[data-f="nosheet"]');
+    if (!box) return { apply: function () { return 0; } };
+
+    function hasOrder() {
+      return ORDER_FIELDS.some(function (k) {
+        return form.elements[k] && form.elements[k].value.trim();
       });
-      if (filled) d.open = true;
+    }
+
+    function paint() {
+      var on = hasOrder();
+      box.hidden = !on;
+      none.hidden = on;
+      if (!on) return;
+
+      var v = {};
+      ORDER_FIELDS.forEach(function (k) {
+        v[k] = form.elements[k] ? form.elements[k].value : '';
+      });
+
+      var named = !!form.elements.sheetName.value;
+      form.querySelector('[data-f="sheetlabel"]').textContent = named ? '注文シート' : 'このカルテの注文内容';
+      form.querySelector('[data-f="sheetname"]').textContent =
+        form.elements.sheetName.value || v.styleName || '（名前なし）';
+
+      HeadMap.render(form.querySelector('#form-headmap'), v, { editable: false });
+
+      var specs = [
+        ['長さ感', v.lengthGenre],
+        ['量感調整', v.thinning],
+        ['パーマ', v.perm],
+        ['カラー', v.color],
+        ['スタイリング', v.styling]
+      ].filter(function (r) { return r[1]; });
+      form.querySelector('[data-f="specs"]').innerHTML = specs.map(function (r) {
+        return '<div class="speclist__row"><dt>' + esc(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd></div>';
+      }).join('');
+
+      var note = form.querySelector('[data-f="orderNote"]');
+      note.hidden = !v.orderNote;
+      if (v.orderNote) {
+        note.innerHTML = '<h4 class="notebox__title">伝えたいこと</h4><p>' +
+          esc(v.orderNote).replace(/\n/g, '<br>') + '</p>';
+      }
+    }
+
+    function apply(sh) {
+      ORDER_FIELDS.forEach(function (k) {
+        if (form.elements[k]) form.elements[k].value = sh[k] == null ? '' : sh[k];
+      });
+      form.elements.sheetId.value = sh.id || '';
+      form.elements.sheetName.value = sh.name || '';
+      paint();
+      // 参考モデルの写真も一緒に持ってくる（自分の写真はこれから撮るので写さない）
+      return photoBox ? photoBox.addRefFrom(sh.id) : 0;
+    }
+
+    form.querySelectorAll('[data-action="paste-sheet"]').forEach(function (b) {
+      b.addEventListener('click', function () { openSheetPicker(apply); });
     });
 
-    // 参考モデルの写真も一緒に持ってくる（自分の写真はこれから撮るので写さない）
-    return photoBox ? photoBox.addRefFrom(sh.id) : 0;
+    form.querySelector('[data-action="go-sheets"]')
+      .addEventListener('click', function () { go('#/sheet-new'); });
+
+    form.querySelector('[data-action="clear-sheet"]').addEventListener('click', function () {
+      ORDER_FIELDS.forEach(function (k) {
+        if (form.elements[k]) form.elements[k].value = '';
+      });
+      form.elements.sheetId.value = '';
+      form.elements.sheetName.value = '';
+      paint();
+    });
+
+    paint();
+    return { apply: apply };
   }
 
-  function openSheetPicker(form, photoBox) {
+  function openSheetPicker(onPick) {
     if (!state.sheets.length) {
-      toast('注文シートがまだありません');
+      toast('注文シートがまだありません。先に「注文シート」タブで作ってください');
       return;
     }
     var box = document.getElementById('picksheet');
@@ -1577,7 +1648,7 @@
         '<span class="pickitem__sub">' + esc(sh.styleName || 'スタイル未設定') + '</span>';
       b.addEventListener('click', function () {
         box.hidden = true;
-        var n = applySheetToForm(form, sh, photoBox);
+        var n = onPick(sh);
         toast('「' + (sh.name || '注文シート') + '」を貼り付けました' + (n ? '（写真' + n + '枚も）' : ''));
       });
       list.appendChild(b);

@@ -364,7 +364,59 @@
       </fieldset>
 </template>
 
-<!-- 髪型の注文（カルテと注文シートで共有） -->
+<!-- カルテ側。髪型の注文は作らず、注文シートタブで作ったものを貼り付ける -->
+<template id="tpl-used-sheet">
+      <fieldset class="fs">
+        <legend class="fs__legend">使った注文シート</legend>
+
+        <input type="hidden" name="sheetId">
+        <input type="hidden" name="sheetName">
+        <input type="hidden" name="styleName">
+        <input type="hidden" name="lengthGenre">
+        <input type="hidden" name="topLen">
+        <input type="hidden" name="frontLen">
+        <input type="hidden" name="sideMm">
+        <input type="hidden" name="sideburnMm">
+        <input type="hidden" name="backMm">
+        <input type="hidden" name="fadeHeight">
+        <input type="hidden" name="thinning">
+        <input type="hidden" name="perm">
+        <input type="hidden" name="color">
+        <input type="hidden" name="styling">
+        <input type="hidden" name="orderNote">
+
+        <div class="usedsheet__none" data-f="nosheet">
+          <p class="usedsheet__lead">この日にお願いした注文シートを貼り付けます。</p>
+          <button class="btn btn--primary btn--block" type="button" data-action="paste-sheet">
+            <svg class="ico" aria-hidden="true"><use href="#i-paste"></use></svg>注文シートを貼り付ける
+          </button>
+          <button class="btn btn--block" type="button" data-action="go-sheets">
+            <svg class="ico" aria-hidden="true"><use href="#i-sheet"></use></svg>注文シートを作る
+          </button>
+        </div>
+
+        <div class="usedsheet" data-f="usedsheet" hidden>
+          <div class="usedsheet__head">
+            <div class="usedsheet__title">
+              <p class="usedsheet__label" data-f="sheetlabel">注文シート</p>
+              <h4 class="usedsheet__name" data-f="sheetname"></h4>
+            </div>
+            <div class="usedsheet__btns">
+              <button class="btn btn--small" type="button" data-action="paste-sheet">変える</button>
+              <button class="btn btn--small btn--ghost" type="button" data-action="clear-sheet">外す</button>
+            </div>
+          </div>
+
+          <div id="form-headmap"></div>
+          <dl class="speclist speclist--extra" data-f="specs"></dl>
+          <div class="notebox" data-f="orderNote" hidden></div>
+        </div>
+
+        <p class="hint">髪型の注文は「注文シート」タブで作ります。ここでは、実際にお願いしたシートを選ぶだけです。貼り付けた内容はこのカルテに写しとるので、あとでシートを直してもこの記録は変わりません。</p>
+      </fieldset>
+</template>
+
+<!-- 髪型の注文（注文シートタブで使う） -->
 <template id="tpl-order-fields">
       <fieldset class="fs">
         <legend class="fs__legend">髪型の注文</legend>
@@ -487,7 +539,7 @@
     <div class="empty" id="empty" hidden>
       <p class="empty__icon"><svg class="ico ico--empty" aria-hidden="true"><use href="#i-logo"></use></svg></p>
       <p class="empty__title">まだカルテがありません</p>
-      <p class="empty__text">右下の「＋」から、切った日・お店・注文の仕方を記録しましょう。</p>
+      <p class="empty__text">右下の「＋」から、切った日・お店と、そのとき使った注文シートを残しましょう。</p>
       <button class="btn btn--primary" data-action="new">最初のカルテを作る</button>
     </div>
   </section>
@@ -686,6 +738,7 @@
           <h3 class="panel__title">注文の仕方</h3>
           <button class="btn btn--small" data-action="copy-order"><svg class="ico" aria-hidden="true"><use href="#i-copy"></use></svg>コピー</button>
         </div>
+        <p class="panel__from" data-f="sheetname" hidden></p>
 
         <div class="showcta showcta--inline">
           <div class="showcta__pair">
@@ -792,12 +845,7 @@
         </details>
       </fieldset>
 
-      <div class="pasterow">
-        <button class="btn btn--small" type="button" data-action="paste-sheet">
-          <svg class="ico" aria-hidden="true"><use href="#i-paste"></use></svg>注文シートから貼り付け
-        </button>
-      </div>
-      <div data-slot="order-fields"></div>
+      <div data-slot="used-sheet"></div>
 
       <div data-slot="photo-fields"></div>
 
