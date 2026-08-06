@@ -107,6 +107,7 @@
 
   function openCaptionPicker(photo, done) {
     Picker.open({
+      key: 'photoCaption',
       title: '写真の向き',
       hint: 'どこから撮った写真か',
       presets: PHOTO_CAPTIONS,

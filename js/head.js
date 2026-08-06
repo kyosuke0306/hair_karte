@@ -352,13 +352,28 @@
       return '<option value="' + esc(v) + '"></option>';
     }).join('');
 
-    // ボタンは履歴のみ。最大5件。
-    var hist = opts.key ? history(opts.key) : (opts.presets || []).slice(0, HIST_MAX);
+    // ボタンの出し方は項目によって変える。どちらも最大5個。
+    //  ・ミリ数：数値のスライダーで選ぶので、ボタンは自分が使った履歴だけ
+    //  ・それ以外（前髪の長さ・刈り上げの高さなど）：数値で表せないので候補から選べるようにする
+    var hist = opts.key ? history(opts.key) : [];
+    var choices;
+    if (opts.unit === 'mm') {
+      choices = hist.slice(0, HIST_MAX);
+    } else {
+      var seen = {};
+      choices = hist.concat(opts.presets || opts.suggest || []).filter(function (v) {
+        if (!v || seen[v]) return false;
+        seen[v] = true;
+        return true;
+      }).slice(0, HIST_MAX);
+    }
+
     var block = sheet.querySelector('[data-f="histblock"]');
     var box = sheet.querySelector('[data-f="presets"]');
-    sheet.querySelector('[data-f="histlabel"]').textContent = opts.historyLabel || 'よく使う値';
+    sheet.querySelector('[data-f="histlabel"]').textContent =
+      opts.historyLabel || (opts.unit === 'mm' ? 'よく使う値' : '選ぶ');
     box.innerHTML = '';
-    hist.forEach(function (p) {
+    choices.forEach(function (p) {
       var b = document.createElement('button');
       b.type = 'button';
       b.className = 'preset' + (p === opts.current ? ' is-on' : '');
@@ -366,7 +381,7 @@
       b.addEventListener('click', function () { finish(p); });
       box.appendChild(b);
     });
-    block.hidden = hist.length === 0;
+    block.hidden = choices.length === 0;
 
     // 数値で選べる部位はスライダーを出す
     var num = sheet.querySelector('[data-f="numpick"]');
