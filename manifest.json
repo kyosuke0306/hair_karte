@@ -1,0 +1,20 @@
+{
+  "name": "ヘアカルテ",
+  "short_name": "ヘアカルテ",
+  "description": "美容院での髪型の注文の仕方・カット履歴・写真を記録するカルテアプリ",
+  "start_url": "./index.html#/list",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f7f3ef",
+  "theme_color": "#8b5e4c",
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

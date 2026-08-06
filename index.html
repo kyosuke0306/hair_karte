@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#8b5e4c">
+<title>ヘアカルテ | 髪型の注文とカット履歴</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="app-header__inner">
+    <h1 class="app-title"><span class="app-title__mark">✂</span> ヘアカルテ</h1>
+    <nav class="tabs" id="tabs">
+      <a class="tab" href="#/list" data-view="list">カルテ</a>
+      <a class="tab" href="#/stats" data-view="stats">記録</a>
+      <a class="tab" href="#/settings" data-view="settings">設定</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="main"></main>
+
+<button class="fab" id="fab" type="button" title="新しいカルテを追加">＋</button>
+
+<div class="lightbox" id="lightbox" hidden>
+  <button class="lightbox__close" type="button" aria-label="閉じる">×</button>
+  <img class="lightbox__img" alt="">
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<!-- ============ テンプレート ============ -->
+
+<template id="tpl-list">
+  <section class="view">
+    <div class="summary" id="summary"></div>
+
+    <div class="filterbar">
+      <input type="search" id="q" class="input" placeholder="🔍 スタイル名・店名・メモで検索">
+      <select id="sort" class="input input--sort">
+        <option value="date-desc">新しい順</option>
+        <option value="date-asc">古い順</option>
+        <option value="rating-desc">評価が高い順</option>
+      </select>
+    </div>
+
+    <div class="cards" id="cards"></div>
+
+    <div class="empty" id="empty" hidden>
+      <p class="empty__icon">💇</p>
+      <p class="empty__title">まだカルテがありません</p>
+      <p class="empty__text">右下の「＋」から、切った日・お店・注文の仕方を記録しましょう。</p>
+      <button class="btn btn--primary" data-action="new">最初のカルテを作る</button>
+    </div>
+  </section>
+</template>
+
+<template id="tpl-detail">
+  <section class="view">
+    <div class="detail-head">
+      <button class="btn btn--ghost" data-action="back">← 一覧</button>
+      <div class="detail-head__actions">
+        <button class="btn btn--ghost" data-action="duplicate">この内容で新規</button>
+        <button class="btn" data-action="edit">編集</button>
+      </div>
+    </div>
+
+    <article class="detail">
+      <div class="detail__title">
+        <h2 class="detail__style" data-f="styleName"></h2>
+        <div class="detail__stars" data-f="rating"></div>
+      </div>
+      <p class="detail__meta" data-f="meta"></p>
+
+      <section class="panel panel--order">
+        <div class="panel__head">
+          <h3 class="panel__title">注文の仕方</h3>
+          <button class="btn btn--small" data-action="copy-order">📋 注文シートをコピー</button>
+        </div>
+        <div class="orderpaper" data-f="orderPaper"></div>
+        <dl class="speclist" data-f="specs"></dl>
+        <div class="notebox" data-f="orderNote" hidden></div>
+      </section>
+
+      <section class="panel">
+        <h3 class="panel__title">写真</h3>
+        <div class="photogroup">
+          <h4 class="photogroup__label">参考モデル</h4>
+          <div class="thumbs" data-f="photos-ref"></div>
+        </div>
+        <div class="photogroup">
+          <h4 class="photogroup__label">自分</h4>
+          <div class="thumbs" data-f="photos-self"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h3 class="panel__title">自己評価</h3>
+        <div class="review" data-f="review"></div>
+      </section>
+
+      <section class="panel panel--danger">
+        <button class="btn btn--danger" data-action="delete">このカルテを削除</button>
+      </section>
+    </article>
+  </section>
+</template>
+
+<template id="tpl-form">
+  <section class="view">
+    <form class="form" id="form" novalidate>
+      <div class="form-head">
+        <button class="btn btn--ghost" type="button" data-action="cancel">← 戻る</button>
+        <h2 class="form-head__title" id="form-title">新しいカルテ</h2>
+        <button class="btn btn--primary" type="submit">保存</button>
+      </div>
+
+      <fieldset class="fs">
+        <legend class="fs__legend">いつ・どこで切ったか</legend>
+        <div class="grid">
+          <label class="field">
+            <span class="field__label">カットした日 <b class="req">必須</b></span>
+            <input class="input" type="date" name="date" required>
+          </label>
+          <label class="field">
+            <span class="field__label">料金（円）</span>
+            <input class="input" type="number" name="price" inputmode="numeric" min="0" step="10" placeholder="5500">
+          </label>
+          <label class="field field--wide">
+            <span class="field__label">お店の名前</span>
+            <input class="input" type="text" name="salon" list="dl-salon" placeholder="例）HAIR SALON ○○">
+            <datalist id="dl-salon"></datalist>
+          </label>
+          <label class="field">
+            <span class="field__label">店舗・エリア</span>
+            <input class="input" type="text" name="area" list="dl-area" placeholder="例）渋谷店">
+            <datalist id="dl-area"></datalist>
+          </label>
+          <label class="field">
+            <span class="field__label">担当スタイリスト</span>
+            <input class="input" type="text" name="stylist" list="dl-stylist" placeholder="例）田中さん">
+            <datalist id="dl-stylist"></datalist>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="fs">
+        <legend class="fs__legend">髪型の注文</legend>
+        <div class="grid">
+          <label class="field field--wide">
+            <span class="field__label">ヘアスタイル名称</span>
+            <input class="input" type="text" name="styleName" list="dl-style" placeholder="例）ツーブロック × マッシュショート">
+            <datalist id="dl-style">
+              <option value="ショート"></option>
+              <option value="ベリーショート"></option>
+              <option value="マッシュショート"></option>
+              <option value="ツーブロック"></option>
+              <option value="フェード（スキンフェード）"></option>
+              <option value="ソフトモヒカン"></option>
+              <option value="センターパート"></option>
+              <option value="ウルフカット"></option>
+              <option value="レイヤーミディアム"></option>
+              <option value="ボブ"></option>
+              <option value="ロングレイヤー"></option>
+            </datalist>
+          </label>
+          <label class="field">
+            <span class="field__label">仕上がりの長さ感</span>
+            <select class="input" name="lengthGenre">
+              <option value="">選択しない</option>
+              <option>ベリーショート</option>
+              <option>ショート</option>
+              <option>ミディアム</option>
+              <option>セミロング</option>
+              <option>ロング</option>
+            </select>
+          </label>
+        </div>
+
+        <h4 class="sub">バリカン・長さ（ミリ / センチ）</h4>
+        <div class="grid grid--mm">
+          <label class="field">
+            <span class="field__label">サイド</span>
+            <input class="input" type="text" name="sideMm" list="dl-mm" placeholder="6mm">
+          </label>
+          <label class="field">
+            <span class="field__label">バック（襟足まで）</span>
+            <input class="input" type="text" name="backMm" list="dl-mm" placeholder="3mm→9mmグラデ">
+          </label>
+          <label class="field">
+            <span class="field__label">もみあげ</span>
+            <input class="input" type="text" name="sideburnMm" list="dl-mm" placeholder="6mm">
+          </label>
+          <label class="field">
+            <span class="field__label">トップ</span>
+            <input class="input" type="text" name="topLen" placeholder="6cm・指2本分残す">
+          </label>
+          <label class="field">
+            <span class="field__label">前髪</span>
+            <input class="input" type="text" name="frontLen" placeholder="眉が半分隠れる長さ">
+          </label>
+          <label class="field">
+            <span class="field__label">刈り上げの高さ</span>
+            <input class="input" type="text" name="fadeHeight" placeholder="耳の高さまで">
+          </label>
+          <datalist id="dl-mm">
+            <option value="0.5mm"></option><option value="1mm"></option><option value="2mm"></option>
+            <option value="3mm"></option><option value="6mm"></option><option value="9mm"></option>
+            <option value="12mm"></option><option value="15mm"></option><option value="18mm"></option>
+            <option value="刈り上げなし"></option>
+          </datalist>
+        </div>
+
+        <h4 class="sub">その他のオーダー</h4>
+        <div class="grid">
+          <label class="field">
+            <span class="field__label">すき具合（量感調整）</span>
+            <select class="input" name="thinning">
+              <option value="">選択しない</option>
+              <option>すかない</option>
+              <option>少なめにすく</option>
+              <option>ふつう</option>
+              <option>しっかりすく</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="field__label">パーマ</span>
+            <input class="input" type="text" name="perm" placeholder="例）ツイストスパイラル">
+          </label>
+          <label class="field">
+            <span class="field__label">カラー</span>
+            <input class="input" type="text" name="color" placeholder="例）8トーン アッシュベージュ">
+          </label>
+          <label class="field">
+            <span class="field__label">セット・スタイリング剤</span>
+            <input class="input" type="text" name="styling" placeholder="例）マット系ワックス">
+          </label>
+          <label class="field field--wide">
+            <span class="field__label">伝えたこと・注文メモ</span>
+            <textarea class="input" name="orderNote" rows="4" placeholder="「サイドは刈り上げて、トップは動きが出るようにレイヤーを入れてください」など、そのまま言えるように書いておくと便利です。"></textarea>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="fs">
+        <legend class="fs__legend">写真</legend>
+        <div class="photo-editors">
+          <div class="photo-editor" data-kind="ref">
+            <h4 class="sub">参考モデルの写真</h4>
+            <div class="thumbs thumbs--edit" data-slot="ref"></div>
+            <label class="btn btn--upload">
+              画像を選ぶ
+              <input type="file" accept="image/*" multiple hidden data-upload="ref">
+            </label>
+          </div>
+          <div class="photo-editor" data-kind="self">
+            <h4 class="sub">自分の写真（仕上がり）</h4>
+            <div class="thumbs thumbs--edit" data-slot="self"></div>
+            <label class="btn btn--upload">
+              画像を選ぶ / 撮影
+              <input type="file" accept="image/*" multiple hidden data-upload="self">
+            </label>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="fs">
+        <legend class="fs__legend">自己評価</legend>
+        <div class="field">
+          <span class="field__label">満足度</span>
+          <div class="stars-input" id="stars-input">
+            <button type="button" class="star" data-v="1">★</button>
+            <button type="button" class="star" data-v="2">★</button>
+            <button type="button" class="star" data-v="3">★</button>
+            <button type="button" class="star" data-v="4">★</button>
+            <button type="button" class="star" data-v="5">★</button>
+            <span class="stars-input__label" id="stars-label">未評価</span>
+          </div>
+          <input type="hidden" name="rating" value="0">
+        </div>
+        <div class="grid">
+          <label class="field field--wide">
+            <span class="field__label">よかった点</span>
+            <textarea class="input" name="good" rows="2" placeholder="サイドの刈り上げの高さがちょうどよかった"></textarea>
+          </label>
+          <label class="field field--wide">
+            <span class="field__label">いまいちだった点</span>
+            <textarea class="input" name="bad" rows="2" placeholder="トップを切りすぎてセットしにくい"></textarea>
+          </label>
+          <label class="field field--wide">
+            <span class="field__label">次回はこうする</span>
+            <textarea class="input" name="next" rows="2" placeholder="次はトップを2cm長めに残してもらう"></textarea>
+          </label>
+        </div>
+      </fieldset>
+
+      <div class="form-foot">
+        <button class="btn btn--primary btn--block" type="submit">保存する</button>
+      </div>
+    </form>
+  </section>
+</template>
+
+<template id="tpl-stats">
+  <section class="view">
+    <h2 class="view__title">記録のふりかえり</h2>
+    <div class="statgrid" id="statgrid"></div>
+
+    <section class="panel">
+      <h3 class="panel__title">カットの間隔</h3>
+      <div class="chart" id="chart-interval"></div>
+    </section>
+
+    <section class="panel">
+      <h3 class="panel__title">よく行くお店</h3>
+      <div class="ranking" id="rank-salon"></div>
+    </section>
+
+    <section class="panel">
+      <h3 class="panel__title">評価の高かったスタイル</h3>
+      <div class="ranking" id="rank-style"></div>
+    </section>
+  </section>
+</template>
+
+<template id="tpl-settings">
+  <section class="view">
+    <h2 class="view__title">設定</h2>
+
+    <section class="panel">
+      <h3 class="panel__title">バックアップ</h3>
+      <p class="panel__text">データはこの端末のブラウザ内だけに保存されます。機種変更の前や、念のための保存にはエクスポートを使ってください（写真も含まれます）。</p>
+      <div class="btnrow">
+        <button class="btn" data-action="export">📤 エクスポート（JSON）</button>
+        <label class="btn btn--upload">
+          📥 インポート
+          <input type="file" accept="application/json,.json" hidden data-action="import">
+        </label>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3 class="panel__title">表示</h3>
+      <label class="field">
+        <span class="field__label">テーマ</span>
+        <select class="input" id="theme-select">
+          <option value="auto">端末の設定に合わせる</option>
+          <option value="light">ライト</option>
+          <option value="dark">ダーク</option>
+        </select>
+      </label>
+    </section>
+
+    <section class="panel">
+      <h3 class="panel__title">保存の状況</h3>
+      <div class="speclist" id="storage-info"></div>
+    </section>
+
+    <section class="panel panel--danger">
+      <h3 class="panel__title">データの全消去</h3>
+      <p class="panel__text">すべてのカルテと写真が消えます。元に戻せません。</p>
+      <button class="btn btn--danger" data-action="wipe">すべて削除する</button>
+    </section>
+  </section>
+</template>
+
+<script src="js/db.js"></script>
+<script src="js/photos.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
