@@ -154,6 +154,7 @@
 
   function route() {
     closeLightbox();
+    if (window.HeadMap) HeadMap.close();
     releaseURLs();
     var hash = location.hash || '#/list';
     var parts = hash.replace(/^#\//, '').split('/');
@@ -333,15 +334,11 @@
     var sheet = orderSheet(r);
     root.querySelector('[data-f="orderPaper"]').textContent = sheet || '注文の記録はまだありません。';
 
+    HeadMap.render(root.querySelector('#detail-headmap'), r, { editable: false });
+
+    // 図に出ない項目だけを一覧で補う
     var specs = [
-      ['スタイル名称', r.styleName],
       ['長さ感', r.lengthGenre],
-      ['サイド', r.sideMm],
-      ['バック', r.backMm],
-      ['もみあげ', r.sideburnMm],
-      ['刈り上げの高さ', r.fadeHeight],
-      ['トップ', r.topLen],
-      ['前髪', r.frontLen],
       ['量感調整', r.thinning],
       ['パーマ', r.perm],
       ['カラー', r.color],
@@ -490,6 +487,7 @@
     }
 
     setupStars(form, Number(form.elements.rating.value) || 0);
+    setupHeadMap(form);
     ['ref', 'self'].forEach(function (kind) { drawEditThumbs(kind); });
 
     form.querySelectorAll('[data-upload]').forEach(function (input) {
@@ -623,6 +621,24 @@
           console.error(err);
           toast('保存できませんでした：' + (err && err.name === 'QuotaExceededError' ? '端末の空き容量が足りません' : 'エラーが発生しました'));
         });
+    });
+  }
+
+  /** 部位図と hidden input を同期させる */
+  function setupHeadMap(form) {
+    var box = form.querySelector('#form-headmap');
+    if (!box) return;
+
+    var values = {};
+    HeadMap.order.forEach(function (k) {
+      values[k] = form.elements[k] ? form.elements[k].value : '';
+    });
+
+    HeadMap.render(box, values, {
+      editable: true,
+      onChange: function (key, value) {
+        if (form.elements[key]) form.elements[key].value = value;
+      }
     });
   }
 

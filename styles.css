@@ -10,6 +10,13 @@
   --accent-soft: #f0e2db;
   --accent-strong: #6f4738;
   --on-accent: #ffffff;
+  --hm-skin: #f0ddd0;
+  --hm-cloth: #ded2c9;
+  --hm-mark: #b09b8c;
+  --hm-hair: #cbb6a7;
+  --hm-unset: #b6a396;
+  --hm-unset-text: #a2938a;
+  --hm-lead: #c3b2a6;
   --hero-from: #8b5e4c;
   --hero-to: #6f4738;
   --hero-fg: #ffffff;
@@ -32,6 +39,13 @@
     --accent-soft: #3a2b23;
     --accent-strong: #e3b79f;
     --on-accent: #23180f;
+    --hm-skin: #4a3a30;
+    --hm-cloth: #352b24;
+    --hm-mark: #7d6a5d;
+    --hm-hair: #55463b;
+    --hm-unset: #6b5949;
+    --hm-unset-text: #8b7a6d;
+    --hm-lead: #55473d;
     --hero-from: #55392c;
     --hero-to: #33231b;
     --hero-fg: #f6ebe3;
@@ -52,6 +66,13 @@
   --accent-soft: #3a2b23;
   --accent-strong: #e3b79f;
   --on-accent: #23180f;
+  --hm-skin: #4a3a30;
+  --hm-cloth: #352b24;
+  --hm-mark: #7d6a5d;
+  --hm-hair: #55463b;
+  --hm-unset: #6b5949;
+  --hm-unset-text: #8b7a6d;
+  --hm-lead: #55473d;
   --hero-from: #55392c;
   --hero-to: #33231b;
   --hero-fg: #f6ebe3;
@@ -421,6 +442,8 @@ dl, dd, dt { margin: 0; }
 .sub { font-size: 12px; color: var(--text-muted); margin: 16px 0 8px; }
 
 .grid { display: grid; gap: 12px; }
+.grid--pair { grid-template-columns: 1fr 1fr; }
+.field--mt { margin-top: 12px; }
 
 @media (min-width: 560px) {
   .grid { grid-template-columns: 1fr 1fr; }
@@ -539,6 +562,201 @@ select.input {
 .ranking__name { flex: 1; overflow-wrap: anywhere; }
 .ranking__stars { white-space: nowrap; }
 .ranking__value { color: var(--text-muted); font-size: 12px; white-space: nowrap; min-width: 34px; text-align: right; }
+
+/* ============ 折りたたみ ============ */
+.foldout {
+  margin-top: 14px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.foldout__head {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.foldout__head::-webkit-details-marker { display: none; }
+
+.foldout__head::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform .15s ease;
+}
+
+.foldout[open] .foldout__head::before { transform: rotate(45deg); }
+.fs > .foldout { margin-top: 14px; }
+.fs > .foldout[open] > .grid,
+.fs > .foldout[open] > * + * { margin-top: 12px; }
+.foldout > .orderpaper { margin-top: 10px; }
+.speclist--extra:empty { display: none; }
+
+/* ============ 部位図（アバター） ============ */
+.headmap { display: grid; gap: 6px; }
+
+@media (min-width: 620px) {
+  .headmap { grid-template-columns: 1fr 1fr; }
+}
+
+.hm {
+  position: relative;
+  background: var(--surface-2);
+  border-radius: 12px;
+  padding: 6px 2px 2px;
+}
+
+.hm__caption {
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: .06em;
+}
+
+.hm__svg { display: block; width: 100%; height: auto; }
+
+/* 体・顔 */
+.hm-skin { fill: var(--hm-skin); }
+.hm-cloth { fill: var(--hm-cloth); }
+.hm-mark { fill: var(--hm-mark); }
+.hm-line { fill: none; stroke: var(--hm-mark); stroke-width: 2; stroke-linecap: round; }
+
+/* 髪のベース。設定していない部位はこの色のまま残る */
+.hm__hair { pointer-events: none; }
+
+.hm-hairbase {
+  fill: none;
+  stroke: var(--hm-hair);
+  stroke-width: 15;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 部位のバンド。ベースの上に重ねて、設定済みの部分だけ色を変える */
+.hmz__band {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 15;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hmz.is-set .hmz__band { stroke: var(--accent); }
+
+/* 刈り上げの高さは髪の量ではなく位置なので、線で表す */
+.hmz__band--line {
+  stroke: var(--hm-lead);
+  stroke-width: 3;
+  stroke-dasharray: 7 5;
+}
+
+.hmz.is-set .hmz__band--line { stroke: var(--accent); stroke-width: 3.5; }
+
+/* 顔や体は装飾なので、タップを奪わないようにする */
+.hm__body { pointer-events: none; }
+
+.hmz__hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 34;
+  stroke-linecap: round;
+  pointer-events: stroke;
+}
+
+.hmz__texthit { fill: transparent; pointer-events: all; }
+.hmz__band, .hmz__lead, .hmz__label, .hmz__value { pointer-events: none; }
+
+/* 読むだけの図では当たり判定も無効にする */
+.headmap:not(.headmap--edit) .hmz__hit,
+.headmap:not(.headmap--edit) .hmz__texthit { pointer-events: none; }
+
+.hmz__lead {
+  fill: none;
+  stroke: var(--hm-lead);
+  stroke-width: 1.4;
+  stroke-dasharray: 3 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hmz__label { font-size: 10px; fill: var(--text-muted); }
+
+.hmz__value {
+  font-size: 12.5px;
+  font-weight: 700;
+  fill: var(--hm-unset-text);
+}
+
+.hmz.is-set .hmz__value { fill: var(--text); }
+
+/* 編集できるときだけ反応させる */
+.headmap--edit .hmz { cursor: pointer; }
+.headmap--edit .hmz:hover .hmz__band,
+.headmap--edit .hmz:focus-visible .hmz__band { stroke: var(--accent-strong); }
+.headmap--edit .hmz:focus { outline: none; }
+.headmap--edit .hmz:focus-visible .hmz__value { text-decoration: underline; }
+
+.headmap--edit .hmz:not(.is-set) .hmz__band { stroke: var(--hm-unset); stroke-dasharray: 2 10; }
+.headmap--edit .hmz:not(.is-set) .hmz__band--line { stroke-dasharray: 7 5; }
+
+.hm__hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 8px;
+  line-height: 1.6;
+}
+
+/* ============ 値を選ぶシート ============ */
+.sheet { position: fixed; inset: 0; z-index: 90; display: flex; align-items: flex-end; }
+.sheet[hidden] { display: none; }
+.sheet__scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, .45); }
+
+.sheet__panel {
+  position: relative;
+  width: 100%;
+  max-width: var(--maxw);
+  margin: 0 auto;
+  background: var(--surface);
+  border-radius: 16px 16px 0 0;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+  max-height: 82vh;
+  overflow-y: auto;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, .22);
+}
+
+.sheet__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.sheet__title { font-size: 16px; }
+.sheet__hint { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+.sheet__presets { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 16px; }
+
+.preset {
+  appearance: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 9px 15px;
+  cursor: pointer;
+}
+
+.preset.is-on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.sheet__foot { display: flex; gap: 8px; margin-top: 16px; }
+.sheet__foot .btn { flex: 1; padding: 12px; font-size: 14px; }
 
 /* ============ 顔隠しエディタ ============ */
 .editor {

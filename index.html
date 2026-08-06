@@ -188,9 +188,16 @@
           <h3 class="panel__title">注文の仕方</h3>
           <button class="btn btn--small" data-action="copy-order"><svg class="ico" aria-hidden="true"><use href="#i-copy"></use></svg>注文シートをコピー</button>
         </div>
-        <div class="orderpaper" data-f="orderPaper"></div>
-        <dl class="speclist" data-f="specs"></dl>
+
+        <div id="detail-headmap"></div>
+
+        <dl class="speclist speclist--extra" data-f="specs"></dl>
         <div class="notebox" data-f="orderNote" hidden></div>
+
+        <details class="foldout">
+          <summary class="foldout__head">美容室で見せる文章</summary>
+          <div class="orderpaper" data-f="orderPaper"></div>
+        </details>
       </section>
 
       <section class="panel">
@@ -228,7 +235,7 @@
 
       <fieldset class="fs">
         <legend class="fs__legend">いつ・どこで切ったか</legend>
-        <div class="grid">
+        <div class="grid grid--pair">
           <label class="field">
             <span class="field__label">カットした日 <b class="req">必須</b></span>
             <input class="input" type="date" name="date" required>
@@ -237,30 +244,39 @@
             <span class="field__label">料金（円）</span>
             <input class="input" type="number" name="price" inputmode="numeric" min="0" step="10" placeholder="5500">
           </label>
-          <label class="field field--wide">
-            <span class="field__label">お店の名前</span>
-            <input class="input" type="text" name="salon" list="dl-salon" placeholder="例）HAIR SALON ○○">
-            <datalist id="dl-salon"></datalist>
-          </label>
-          <label class="field">
-            <span class="field__label">店舗・エリア</span>
-            <input class="input" type="text" name="area" list="dl-area" placeholder="例）渋谷店">
-            <datalist id="dl-area"></datalist>
-          </label>
-          <label class="field">
-            <span class="field__label">担当スタイリスト</span>
-            <input class="input" type="text" name="stylist" list="dl-stylist" placeholder="例）田中さん">
-            <datalist id="dl-stylist"></datalist>
-          </label>
         </div>
+        <label class="field field--mt">
+          <span class="field__label">お店の名前</span>
+          <input class="input" type="text" name="salon" list="dl-salon" placeholder="例）HAIR SALON ○○">
+          <datalist id="dl-salon"></datalist>
+        </label>
+
+        <details class="foldout">
+          <summary class="foldout__head">店舗・担当スタイリストも記録する</summary>
+          <div class="grid grid--pair">
+            <label class="field">
+              <span class="field__label">店舗・エリア</span>
+              <input class="input" type="text" name="area" list="dl-area" placeholder="渋谷店">
+              <datalist id="dl-area"></datalist>
+            </label>
+            <label class="field">
+              <span class="field__label">担当スタイリスト</span>
+              <input class="input" type="text" name="stylist" list="dl-stylist" placeholder="田中さん">
+              <datalist id="dl-stylist"></datalist>
+            </label>
+          </div>
+        </details>
       </fieldset>
 
       <fieldset class="fs">
         <legend class="fs__legend">髪型の注文</legend>
-        <div class="grid">
-          <label class="field field--wide">
+        <div id="form-headmap"></div>
+        <p class="hm__hint">図の部位をタップして、ミリ数や長さを選べます。</p>
+
+        <div class="grid field--mt">
+          <label class="field">
             <span class="field__label">ヘアスタイル名称</span>
-            <input class="input" type="text" name="styleName" list="dl-style" placeholder="例）ツーブロック × マッシュショート">
+            <input class="input" type="text" name="styleName" list="dl-style" placeholder="ツーブロック">
             <datalist id="dl-style">
               <option value="ショート"></option>
               <option value="ベリーショート"></option>
@@ -288,41 +304,15 @@
           </label>
         </div>
 
-        <h4 class="sub">バリカン・長さ（ミリ / センチ）</h4>
-        <div class="grid grid--mm">
-          <label class="field">
-            <span class="field__label">サイド</span>
-            <input class="input" type="text" name="sideMm" list="dl-mm" placeholder="6mm">
-          </label>
-          <label class="field">
-            <span class="field__label">バック（襟足まで）</span>
-            <input class="input" type="text" name="backMm" list="dl-mm" placeholder="3mm→9mmグラデ">
-          </label>
-          <label class="field">
-            <span class="field__label">もみあげ</span>
-            <input class="input" type="text" name="sideburnMm" list="dl-mm" placeholder="6mm">
-          </label>
-          <label class="field">
-            <span class="field__label">トップ</span>
-            <input class="input" type="text" name="topLen" placeholder="6cm・指2本分残す">
-          </label>
-          <label class="field">
-            <span class="field__label">前髪</span>
-            <input class="input" type="text" name="frontLen" placeholder="眉が半分隠れる長さ">
-          </label>
-          <label class="field">
-            <span class="field__label">刈り上げの高さ</span>
-            <input class="input" type="text" name="fadeHeight" placeholder="耳の高さまで">
-          </label>
-          <datalist id="dl-mm">
-            <option value="0.5mm"></option><option value="1mm"></option><option value="2mm"></option>
-            <option value="3mm"></option><option value="6mm"></option><option value="9mm"></option>
-            <option value="12mm"></option><option value="15mm"></option><option value="18mm"></option>
-            <option value="刈り上げなし"></option>
-          </datalist>
-        </div>
+        <input type="hidden" name="sideMm">
+        <input type="hidden" name="backMm">
+        <input type="hidden" name="sideburnMm">
+        <input type="hidden" name="topLen">
+        <input type="hidden" name="frontLen">
+        <input type="hidden" name="fadeHeight">
 
-        <h4 class="sub">その他のオーダー</h4>
+        <details class="foldout">
+          <summary class="foldout__head">パーマ・カラー・すき具合を記録する</summary>
         <div class="grid">
           <label class="field">
             <span class="field__label">すき具合（量感調整）</span>
@@ -348,9 +338,10 @@
           </label>
           <label class="field field--wide">
             <span class="field__label">伝えたこと・注文メモ</span>
-            <textarea class="input" name="orderNote" rows="4" placeholder="「サイドは刈り上げて、トップは動きが出るようにレイヤーを入れてください」など、そのまま言えるように書いておくと便利です。"></textarea>
+            <textarea class="input" name="orderNote" rows="3" placeholder="そのまま言えるように書いておくと便利です"></textarea>
           </label>
         </div>
+        </details>
       </fieldset>
 
       <fieldset class="fs">
@@ -390,6 +381,8 @@
           </div>
           <input type="hidden" name="rating" value="0">
         </div>
+        <details class="foldout">
+          <summary class="foldout__head">よかった点・次回へのメモを書く</summary>
         <div class="grid">
           <label class="field field--wide">
             <span class="field__label">よかった点</span>
@@ -404,6 +397,7 @@
             <textarea class="input" name="next" rows="2" placeholder="次はトップを2cm長めに残してもらう"></textarea>
           </label>
         </div>
+        </details>
       </fieldset>
 
       <div class="form-foot">
@@ -479,6 +473,7 @@
 <script src="js/db.js"></script>
 <script src="js/photos.js"></script>
 <script src="js/mask.js"></script>
+<script src="js/head.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
