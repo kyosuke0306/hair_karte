@@ -93,15 +93,17 @@
   }
 
   /* 写真の向き。よく使うものをボタンで選べるようにする */
-  var PHOTO_CAPTIONS = ['正面', '斜め', '横', '後ろ', 'トップ（つむじ）', '全体'];
+  var PHOTO_CAPTIONS = ['正面', '斜め', '横', '後ろ', '全体'];
 
   function openCaptionPicker(photo, done) {
     Picker.open({
       title: '写真の向き',
       hint: 'どこから撮った写真か',
       presets: PHOTO_CAPTIONS,
+      historyLabel: '向き',
       current: photo.caption || '',
       placeholder: '例）右サイド',
+      suggest: PHOTO_CAPTIONS.concat(['トップ（つむじ）', '右サイド', '左サイド']),
       onPick: function (v) { photo.caption = v; done(); }
     });
   }
@@ -237,14 +239,19 @@
         (left >= 0 ? '（あと' + left + '日）' : '（' + Math.abs(left) + '日超過）');
     }
 
+    // 日付と場所は同じ行にまとめる。空の項目は出さない。
+    var where = [latest.salon, latest.stylist].filter(Boolean).join(' / ');
+    var line = [formatDate(latest.date), where].filter(Boolean).join('　・　');
+
     box.hidden = false;
     box.innerHTML =
       '<div class="summary__main">' +
         '<span class="summary__num">' + (since == null ? '—' : since) + '</span>' +
         '<span class="summary__unit">日前にカット</span>' +
       '</div>' +
+      '<p class="summary__date">' + esc(line) + '</p>' +
       '<dl class="summary__sub">' +
-        '<div><dt>前回</dt><dd>' + esc(latest.salon || '記録なし') + '</dd></div>' +
+        '<div><dt>カット回数</dt><dd>' + state.records.length + '回</dd></div>' +
         '<div><dt>平均周期</dt><dd>' + (avg ? Math.round(avg) + '日' : '—') + '</dd></div>' +
         '<div><dt>次の目安</dt><dd>' + esc(nextText) + '</dd></div>' +
       '</dl>';
@@ -511,6 +518,7 @@
 
     setupStars(form, Number(form.elements.rating.value) || 0);
     setupHeadMap(form);
+    setupStyleSelect(form);
     ['ref', 'self'].forEach(function (kind) { drawEditThumbs(kind); });
 
     form.querySelectorAll('[data-upload]').forEach(function (input) {
@@ -661,6 +669,57 @@
           console.error(err);
           toast('保存できませんでした：' + (err && err.name === 'QuotaExceededError' ? '端末の空き容量が足りません' : 'エラーが発生しました'));
         });
+    });
+  }
+
+  /** ヘアスタイルは選択式。一覧に無いものは「その他」で自由に入力できる */
+  function setupStyleSelect(form) {
+    var sel = form.elements.styleSelect;
+    var text = form.elements.styleName;
+    if (!sel || !text) return;
+
+    // 過去に使ったスタイルを候補の先頭に足す
+    var used = {};
+    state.records.forEach(function (r) { if (r.styleName) used[r.styleName] = true; });
+    var og = form.querySelector('#og-used');
+    var names = Object.keys(used);
+    og.innerHTML = names.map(function (v) {
+      return '<option value="' + esc(v) + '">' + esc(v) + '</option>';
+    }).join('');
+    og.hidden = names.length === 0;
+
+    function hasOption(v) {
+      return Array.prototype.some.call(sel.options, function (o) {
+        return o.value === v && o.value !== '__other';
+      });
+    }
+
+    function showOther(show) {
+      text.hidden = !show;
+      if (show) text.focus();
+    }
+
+    // 保存されている値から選択状態を復元する
+    var value = text.value.trim();
+    if (!value) {
+      sel.value = '';
+      showOther(false);
+    } else if (hasOption(value)) {
+      sel.value = value;
+      showOther(false);
+    } else {
+      sel.value = '__other';
+      showOther(true);
+    }
+
+    sel.addEventListener('change', function () {
+      if (sel.value === '__other') {
+        showOther(true);
+        text.value = '';
+      } else {
+        showOther(false);
+        text.value = sel.value;
+      }
     });
   }
 
@@ -994,6 +1053,16 @@
   });
 
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    // 新しい Service Worker が主導権を取ったら読み直す。
+    // 前のものが残っていると、更新しても古い画面が出続けるため。
+    var hadController = !!navigator.serviceWorker.controller;
+    var refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (!hadController || refreshing) return;   // 初回登録のときは読み直さない
+      refreshing = true;
+      location.reload();
+    });
+
     window.addEventListener('load', function () {
       navigator.serviceWorker.register('sw.js').catch(function () { /* オフライン対応なしで動作 */ });
     });

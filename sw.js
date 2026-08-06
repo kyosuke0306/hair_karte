@@ -1,5 +1,7 @@
-/* オフラインでも開けるように、アプリの外枠をキャッシュする */
-var CACHE = 'hair-karte-v4';
+/* オフラインでも開けるようにアプリの外枠をキャッシュする。
+   ただしキャッシュ優先だと、更新しても古い画面が出続けてしまう。
+   そのためオンラインのときは常にネットワークを先に見て、取れなければキャッシュを返す。 */
+var CACHE = 'hair-karte-v5';
 var ASSETS = [
   './',
   './index.html',
@@ -28,16 +30,23 @@ self.addEventListener('activate', function (e) {
 
 self.addEventListener('fetch', function (e) {
   if (e.request.method !== 'GET') return;
+
+  var url;
+  try { url = new URL(e.request.url); } catch (err) { return; }
+  if (url.origin !== self.location.origin) return;
+
   e.respondWith(
-    caches.match(e.request).then(function (hit) {
-      if (hit) {
-        // キャッシュを返しつつ、裏で更新しておく
-        fetch(e.request).then(function (res) {
-          if (res && res.ok) caches.open(CACHE).then(function (c) { c.put(e.request, res.clone()); });
-        }).catch(function () {});
-        return hit;
+    fetch(e.request).then(function (res) {
+      if (res && res.ok) {
+        var copy = res.clone();
+        caches.open(CACHE).then(function (c) { c.put(e.request, copy); });
       }
-      return fetch(e.request).catch(function () { return caches.match('./index.html'); });
+      return res;
+    }).catch(function () {
+      // オフラインのときだけキャッシュを使う
+      return caches.match(e.request).then(function (hit) {
+        return hit || caches.match('./index.html');
+      });
     })
   );
 });

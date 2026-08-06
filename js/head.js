@@ -7,38 +7,36 @@
   var ZONES = {
     topLen: {
       label: 'トップ',
-      view: 'front',
-      presets: ['短めに', '3cm', '5cm', '7cm', '指2本分', '長めに残す'],
+      unit: 'cm', min: 0, max: 15, step: 0.5, zeroLabel: '',
+      suggest: ['短めに', '3cm', '5cm', '7cm', '指2本分', '長めに残す'],
       hint: '頭頂部の長さ'
     },
     frontLen: {
       label: '前髪',
-      view: 'front',
-      presets: ['眉上', '眉が半分隠れる', '眉が隠れる', '目にかかる', '流せる長さ', '長め'],
+      suggest: ['眉上', '眉が半分隠れる', '眉が隠れる', '目にかかる', '流せる長さ', '長め'],
       hint: 'どこまでの長さにするか'
     },
     sideMm: {
       label: 'サイド',
-      view: 'front',
-      presets: ['刈り上げなし', '1mm', '3mm', '6mm', '9mm', '12mm', '15mm', '18mm'],
+      unit: 'mm', min: 0, max: 20, step: 0.5, zeroLabel: '刈り上げなし',
+      suggest: ['刈り上げなし', '3mm', '6mm', '9mm', '12mm'],
       hint: 'バリカンのミリ数'
     },
     sideburnMm: {
       label: 'もみあげ',
-      view: 'front',
-      presets: ['刈り上げなし', '1mm', '3mm', '6mm', '9mm', '12mm', '自然に残す'],
+      unit: 'mm', min: 0, max: 20, step: 0.5, zeroLabel: '刈り上げなし',
+      suggest: ['刈り上げなし', '自然に残す', '3mm', '6mm', '9mm'],
       hint: 'バリカンのミリ数・形'
     },
     backMm: {
       label: 'バック',
-      view: 'side',
-      presets: ['刈り上げなし', '1mm', '3mm', '6mm', '9mm', '12mm', '3mm→9mmグラデ', '6mm→12mmグラデ'],
+      unit: 'mm', min: 0, max: 20, step: 0.5, zeroLabel: '刈り上げなし',
+      suggest: ['刈り上げなし', '3mm', '6mm', '9mm', '3mm→9mmグラデ'],
       hint: '襟足までのミリ数'
     },
     fadeHeight: {
       label: '刈り上げの高さ',
-      view: 'side',
-      presets: ['耳の高さまで', '耳の上まで', 'こめかみまで', 'ハチ下まで', '後頭部の丸みまで'],
+      suggest: ['耳の高さまで', '耳の上まで', 'こめかみまで', 'ハチ下まで', '後頭部の丸みまで'],
       hint: 'どこまで刈り上げるか'
     }
   };
@@ -202,10 +200,36 @@
     });
   }
 
+  /* ---------------- よく使う値の履歴 ---------------- */
+
+  var HIST_MAX = 5;
+
+  function histKey(key) { return 'hk-hist-' + key; }
+
+  function history(key) {
+    try {
+      var raw = localStorage.getItem(histKey(key));
+      var list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list.slice(0, HIST_MAX) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function remember(key, value) {
+    if (!key || !value) return;
+    try {
+      var list = history(key).filter(function (v) { return v !== value; });
+      list.unshift(value);
+      localStorage.setItem(histKey(key), JSON.stringify(list.slice(0, HIST_MAX)));
+    } catch (e) { /* 保存できなくても動作には影響しない */ }
+  }
+
   /* ---------------- 値の選択シート（部位図・写真のキャプションで共用） ---------------- */
 
   var sheet = null;
   var pending = null;
+  var current = null;   // 開いている設定
 
   function buildSheet() {
     if (sheet) return sheet;
@@ -220,11 +244,30 @@
           '<p class="sheet__hint" data-f="hint"></p></div>' +
           '<button class="btn btn--ghost" type="button" data-act="close">閉じる</button>' +
         '</div>' +
-        '<div class="sheet__presets" data-f="presets"></div>' +
+
+        '<div class="sheet__block" data-f="histblock" hidden>' +
+          '<span class="field__label" data-f="histlabel">よく使う値</span>' +
+          '<div class="sheet__presets" data-f="presets"></div>' +
+        '</div>' +
+
+        '<div class="numpick" data-f="numpick" hidden>' +
+          '<div class="numpick__read">' +
+            '<b data-f="numval">0</b><span class="numpick__unit" data-f="numunit"></span>' +
+          '</div>' +
+          '<div class="numpick__row">' +
+            '<button class="numpick__step" type="button" data-act="minus" aria-label="減らす">−</button>' +
+            '<input class="numpick__range" type="range" data-f="range" aria-label="長さ">' +
+            '<button class="numpick__step" type="button" data-act="plus" aria-label="増やす">＋</button>' +
+          '</div>' +
+          '<div class="numpick__scale"><span data-f="scalemin"></span><span data-f="scalemax"></span></div>' +
+        '</div>' +
+
         '<label class="field">' +
           '<span class="field__label">自由に入力</span>' +
-          '<input class="input" type="text" data-f="free">' +
+          '<input class="input" type="text" data-f="free" list="sheet-suggest">' +
+          '<datalist id="sheet-suggest"></datalist>' +
         '</label>' +
+
         '<div class="sheet__foot">' +
           '<button class="btn" type="button" data-act="clear">クリア</button>' +
           '<button class="btn btn--primary" type="button" data-act="ok">決定</button>' +
@@ -235,9 +278,16 @@
     sheet.addEventListener('click', function (e) {
       var act = e.target.closest('[data-act]');
       if (!act) return;
-      if (act.dataset.act === 'close') close();
-      if (act.dataset.act === 'clear') finish('');
-      if (act.dataset.act === 'ok') finish(sheet.querySelector('[data-f="free"]').value.trim());
+      var a = act.dataset.act;
+      if (a === 'close') close();
+      if (a === 'clear') finish('');
+      if (a === 'ok') finish(sheet.querySelector('[data-f="free"]').value.trim());
+      if (a === 'minus') nudge(-1);
+      if (a === 'plus') nudge(1);
+    });
+
+    sheet.querySelector('[data-f="range"]').addEventListener('input', function () {
+      applyNumber(Number(this.value));
     });
 
     document.addEventListener('keydown', function (e) {
@@ -247,10 +297,46 @@
     return sheet;
   }
 
-  /** opts: { title, hint, presets, current, placeholder, onPick } */
+  function nudge(dir) {
+    if (!current || !current.unit) return;
+    var range = sheet.querySelector('[data-f="range"]');
+    var next = Number(range.value) + dir * Number(current.step || 1);
+    next = Math.min(Number(current.max), Math.max(Number(current.min), next));
+    range.value = next;
+    applyNumber(next);
+  }
+
+  /** スライダーの値を表示と自由入力欄に反映する */
+  function applyNumber(n) {
+    if (!current || !current.unit) return;
+    var zero = current.zeroLabel;
+    var text = (n === 0 && zero) ? zero : (trimNum(n) + current.unit);
+    sheet.querySelector('[data-f="numval"]').textContent = (n === 0 && zero) ? zero : trimNum(n);
+    sheet.querySelector('[data-f="numunit"]').textContent = (n === 0 && zero) ? '' : current.unit;
+    sheet.querySelector('[data-f="free"]').value = text;
+  }
+
+  function trimNum(n) {
+    return String(Math.round(n * 10) / 10);
+  }
+
+  /** 「6mm」「3cm」などから数値を取り出す。取れなければ null。 */
+  function parseNumber(value, unit, zeroLabel) {
+    if (!value) return null;
+    if (zeroLabel && value === zeroLabel) return 0;
+    var m = new RegExp('^\\s*([0-9]+(?:\\.[0-9]+)?)\\s*' + unit + '\\s*$').exec(value);
+    return m ? Number(m[1]) : null;
+  }
+
+  /**
+   * opts: { key, title, hint, suggest, current, placeholder, unit, min, max, step,
+   *         zeroLabel, historyLabel, onPick }
+   * ボタンとして出すのは履歴だけ（最大5件）。候補は自由入力欄のサジェストに回す。
+   */
   function openSheet(opts) {
     buildSheet();
     pending = opts.onPick;
+    current = opts;
 
     sheet.querySelector('[data-f="title"]').textContent = opts.title || '';
     sheet.querySelector('[data-f="hint"]').textContent = opts.hint || '';
@@ -259,9 +345,19 @@
     free.value = opts.current || '';
     free.placeholder = opts.placeholder || '';
 
+    // 入力候補（ボタンではなくサジェストとして出す）
+    var dl = sheet.querySelector('#sheet-suggest');
+    dl.innerHTML = (opts.suggest || []).map(function (v) {
+      return '<option value="' + esc(v) + '"></option>';
+    }).join('');
+
+    // ボタンは履歴のみ。最大5件。
+    var hist = opts.key ? history(opts.key) : (opts.presets || []).slice(0, HIST_MAX);
+    var block = sheet.querySelector('[data-f="histblock"]');
     var box = sheet.querySelector('[data-f="presets"]');
+    sheet.querySelector('[data-f="histlabel"]').textContent = opts.historyLabel || 'よく使う値';
     box.innerHTML = '';
-    (opts.presets || []).forEach(function (p) {
+    hist.forEach(function (p) {
       var b = document.createElement('button');
       b.type = 'button';
       b.className = 'preset' + (p === opts.current ? ' is-on' : '');
@@ -269,30 +365,62 @@
       b.addEventListener('click', function () { finish(p); });
       box.appendChild(b);
     });
+    block.hidden = hist.length === 0;
+
+    // 数値で選べる部位はスライダーを出す
+    var num = sheet.querySelector('[data-f="numpick"]');
+    if (opts.unit) {
+      var range = sheet.querySelector('[data-f="range"]');
+      range.min = opts.min;
+      range.max = opts.max;
+      range.step = opts.step;
+      var parsed = parseNumber(opts.current, opts.unit, opts.zeroLabel);
+      range.value = parsed == null ? Math.min(Number(opts.max), 6) : parsed;
+      sheet.querySelector('[data-f="scalemin"]').textContent = opts.zeroLabel || (opts.min + opts.unit);
+      sheet.querySelector('[data-f="scalemax"]').textContent = opts.max + opts.unit;
+      // 既存の値を勝手に書き換えないよう、表示だけ更新する
+      var n = Number(range.value);
+      sheet.querySelector('[data-f="numval"]').textContent =
+        (n === 0 && opts.zeroLabel) ? opts.zeroLabel : trimNum(n);
+      sheet.querySelector('[data-f="numunit"]').textContent =
+        (n === 0 && opts.zeroLabel) ? '' : opts.unit;
+      num.hidden = false;
+    } else {
+      num.hidden = true;
+    }
 
     sheet.hidden = false;
   }
 
   function finish(value) {
     var cb = pending;
+    var key = current && current.key;
     close();
+    if (value) remember(key, value);
     if (cb) cb(value);
   }
 
   function close() {
     if (sheet) sheet.hidden = true;
     pending = null;
+    current = null;
   }
 
-  function openPicker(key, current, cb) {
+  function openPicker(key, value, cb) {
     var z = ZONES[key];
     if (!z) return;
     openSheet({
+      key: key,
       title: z.label,
       hint: z.hint,
-      presets: z.presets,
-      current: current,
-      placeholder: '例）6mm・耳の高さまで',
+      suggest: z.suggest,
+      current: value,
+      placeholder: z.suggest && z.suggest.length ? '例）' + z.suggest[1 % z.suggest.length] : '',
+      unit: z.unit,
+      min: z.min,
+      max: z.max,
+      step: z.step,
+      zeroLabel: z.zeroLabel,
       onPick: cb
     });
   }

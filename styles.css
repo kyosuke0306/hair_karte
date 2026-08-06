@@ -178,6 +178,14 @@ dl, dd, dt { margin: 0; }
 }
 
 .summary__main { display: flex; align-items: baseline; gap: 8px; }
+
+.summary__date {
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 8px;
+  opacity: .92;
+  overflow-wrap: anywhere;
+}
 .summary__num { font-size: 40px; font-weight: 700; line-height: 1; }
 .summary__unit { font-size: 14px; opacity: .9; }
 
@@ -775,7 +783,83 @@ select.input {
 .sheet__title { font-size: 16px; }
 .sheet__hint { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 
-.sheet__presets { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 16px; }
+.sheet__block { margin: 14px 0 4px; }
+.sheet__presets { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 16px; }
+
+/* 数値で選ぶ部分 */
+.numpick {
+  background: var(--surface-2);
+  border-radius: 12px;
+  padding: 14px 14px 10px;
+  margin: 4px 0 16px;
+}
+
+.numpick[hidden] { display: none; }
+
+.numpick__read {
+  text-align: center;
+  line-height: 1;
+  margin-bottom: 10px;
+  color: var(--accent);
+}
+
+.numpick__read b { font-size: 34px; font-weight: 700; }
+.numpick__unit { font-size: 17px; font-weight: 700; margin-left: 2px; }
+
+.numpick__row { display: flex; align-items: center; gap: 10px; }
+
+.numpick__step {
+  appearance: none;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.numpick__range {
+  flex: 1;
+  min-width: 0;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line);
+  outline: none;
+}
+
+.numpick__range::-webkit-slider-thumb {
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid var(--surface);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .25);
+  cursor: pointer;
+}
+
+.numpick__range::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid var(--surface);
+  cursor: pointer;
+}
+
+.numpick__scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
 
 .preset {
   appearance: none;

@@ -277,20 +277,41 @@
         <div class="grid field--mt">
           <label class="field">
             <span class="field__label">ヘアスタイル名称</span>
-            <input class="input" type="text" name="styleName" list="dl-style" placeholder="ツーブロック">
-            <datalist id="dl-style">
-              <option value="ショート"></option>
-              <option value="ベリーショート"></option>
-              <option value="マッシュショート"></option>
-              <option value="ツーブロック"></option>
-              <option value="フェード（スキンフェード）"></option>
-              <option value="ソフトモヒカン"></option>
-              <option value="センターパート"></option>
-              <option value="ウルフカット"></option>
-              <option value="レイヤーミディアム"></option>
-              <option value="ボブ"></option>
-              <option value="ロングレイヤー"></option>
-            </datalist>
+            <select class="input" name="styleSelect">
+              <option value="">選択しない</option>
+              <optgroup label="これまでに使ったスタイル" id="og-used"></optgroup>
+              <optgroup label="ベリーショート系">
+                <option>ベリーショート</option>
+                <option>ソフトモヒカン</option>
+                <option>フェード（スキンフェード）</option>
+                <option>刈り上げショート</option>
+                <option>ベリーショート × ツーブロック</option>
+              </optgroup>
+              <optgroup label="ショート系">
+                <option>ショート</option>
+                <option>マッシュショート</option>
+                <option>ツーブロック</option>
+                <option>ツーブロック × マッシュショート</option>
+                <option>センターパート</option>
+                <option>アップバング</option>
+                <option>ショートボブ</option>
+              </optgroup>
+              <optgroup label="ミディアム系">
+                <option>ミディアム</option>
+                <option>レイヤーミディアム</option>
+                <option>ボブ</option>
+                <option>ウルフカット</option>
+                <option>パーマスタイル</option>
+              </optgroup>
+              <optgroup label="ロング系">
+                <option>セミロング</option>
+                <option>ロング</option>
+                <option>ロングレイヤー</option>
+              </optgroup>
+              <option value="__other">その他（自由に入力）</option>
+            </select>
+            <input class="input field--mt" type="text" name="styleName" hidden
+                   placeholder="スタイル名を入力">
           </label>
           <label class="field">
             <span class="field__label">仕上がりの長さ感</span>
