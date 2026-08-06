@@ -136,9 +136,15 @@
       }).then(function () { return sheet; });
     },
 
+    /** 注文シートと、それに紐づく写真をまとめて削除 */
     deleteSheet: function (id) {
-      return tx(['sheets'], 'readwrite').then(function (t) {
+      return tx(['sheets', 'photos'], 'readwrite').then(function (t) {
         t.objectStore('sheets').delete(id);
+        var cur = t.objectStore('photos').index('recordId').openCursor(IDBKeyRange.only(id));
+        cur.onsuccess = function (e) {
+          var cursor = e.target.result;
+          if (cursor) { cursor.delete(); cursor.continue(); }
+        };
         return done(t);
       });
     },

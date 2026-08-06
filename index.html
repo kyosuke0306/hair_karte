@@ -249,6 +249,32 @@
 
 <!-- ============ テンプレート ============ -->
 
+<!-- 写真（カルテと注文シートで共有） -->
+<template id="tpl-photo-fields">
+      <fieldset class="fs">
+        <legend class="fs__legend">写真</legend>
+        <div class="photo-editors">
+          <div class="photo-editor" data-kind="ref">
+            <h4 class="sub">参考モデルの写真</h4>
+            <div class="thumbs thumbs--edit" data-slot-photos="ref"></div>
+            <label class="btn btn--upload">
+              画像を選ぶ
+              <input type="file" accept="image/*" multiple hidden data-upload="ref">
+            </label>
+          </div>
+          <div class="photo-editor" data-kind="self">
+            <h4 class="sub">自分の写真（仕上がり）</h4>
+            <div class="thumbs thumbs--edit" data-slot-photos="self"></div>
+            <label class="btn btn--upload">
+              画像を選ぶ / 撮影
+              <input type="file" accept="image/*" multiple hidden data-upload="self">
+            </label>
+          </div>
+        </div>
+        <p class="hint">写真ごとに「向きを選ぶ」から前・後ろ・横などを付けられます。「顔を隠す」ではモザイク・ぼかし・ぬりつぶしで顔を隠せます。</p>
+      </fieldset>
+</template>
+
 <!-- 髪型の注文（カルテと注文シートで共有） -->
 <template id="tpl-order-fields">
       <fieldset class="fs">
@@ -412,6 +438,7 @@
       </fieldset>
 
       <div data-slot="order-fields"></div>
+      <div data-slot="photo-fields"></div>
 
       <div class="form-foot">
         <button class="btn btn--primary btn--block" type="submit">保存する</button>
@@ -448,6 +475,18 @@
           <summary class="foldout__head">美容室で見せる文章</summary>
           <div class="orderpaper" data-f="orderPaper"></div>
         </details>
+      </section>
+
+      <section class="panel">
+        <h3 class="panel__title">写真</h3>
+        <div class="photogroup">
+          <h4 class="photogroup__label">参考モデル</h4>
+          <div class="thumbs" data-f="photos-ref"></div>
+        </div>
+        <div class="photogroup">
+          <h4 class="photogroup__label">自分</h4>
+          <div class="thumbs" data-f="photos-self"></div>
+        </div>
       </section>
 
       <section class="panel">
@@ -589,28 +628,7 @@
       </div>
       <div data-slot="order-fields"></div>
 
-      <fieldset class="fs">
-        <legend class="fs__legend">写真</legend>
-        <div class="photo-editors">
-          <div class="photo-editor" data-kind="ref">
-            <h4 class="sub">参考モデルの写真</h4>
-            <div class="thumbs thumbs--edit" data-slot="ref"></div>
-            <label class="btn btn--upload">
-              画像を選ぶ
-              <input type="file" accept="image/*" multiple hidden data-upload="ref">
-            </label>
-          </div>
-          <div class="photo-editor" data-kind="self">
-            <h4 class="sub">自分の写真（仕上がり）</h4>
-            <div class="thumbs thumbs--edit" data-slot="self"></div>
-            <label class="btn btn--upload">
-              画像を選ぶ / 撮影
-              <input type="file" accept="image/*" multiple hidden data-upload="self">
-            </label>
-          </div>
-        </div>
-        <p class="hint">写真ごとに「向きを選ぶ」から前・後ろ・横などを付けられます。「顔を隠す」ではモザイク・ぼかし・ぬりつぶしで顔を隠せます。</p>
-      </fieldset>
+      <div data-slot="photo-fields"></div>
 
       <fieldset class="fs">
         <legend class="fs__legend">自己評価</legend>

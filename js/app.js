@@ -224,11 +224,11 @@
     main.innerHTML = '';
     main.appendChild(tpl.content.cloneNode(true));
 
-    // 「髪型の注文」はカルテと注文シートで同じものを使う
-    var slot = main.querySelector('[data-slot="order-fields"]');
-    if (slot) {
-      slot.replaceWith(document.getElementById('tpl-order-fields').content.cloneNode(true));
-    }
+    // 「髪型の注文」「写真」はカルテと注文シートで同じものを使う
+    main.querySelectorAll('[data-slot]').forEach(function (slot) {
+      var t = document.getElementById('tpl-' + slot.dataset.slot);
+      if (t) slot.replaceWith(t.content.cloneNode(true));
+    });
     return main;
   }
 
@@ -525,20 +525,8 @@
     document.getElementById('form-title').textContent = editId ? 'カルテを編集' : '新しいカルテ';
     fillDatalists();
 
-    // 編集中の写真：既存 + 追加分。削除は removed に積んで保存時に反映する。
-    var draftPhotos = editId ? photosOf(editId).slice() : [];
-    var removed = [];
-
-    // 「この内容で新規」は、参考モデルの写真だけ引き継ぐ（自分の写真は今回撮り直すため）
-    if (!editId && copyFromId) {
-      draftPhotos = photosOf(copyFromId, 'ref').map(function (p) {
-        return {
-          id: uid(), recordId: null, kind: 'ref', full: p.full, thumb: p.thumb,
-          width: p.width, height: p.height, masked: !!p.masked,
-          caption: p.caption || '', createdAt: Date.now()
-        };
-      });
-    }
+    // 写真は共通の処理にまかせる（参考モデルの写真は「この内容で新規」で引き継ぐ）
+    var photoBox = setupPhotos(form, editId, copyFromId);
 
     if (base) {
       Object.keys(base).forEach(function (k) {
@@ -561,103 +549,15 @@
     setupMapLink(form);
 
     form.querySelector('[data-action="paste-sheet"]')
-      .addEventListener('click', function () { openSheetPicker(form); });
+      .addEventListener('click', function () { openSheetPicker(form, photoBox); });
 
     // 「このシートでカルテを作る」から来たとき
     if (!editId && pendingSheet) {
-      applySheetToForm(form, pendingSheet);
-      toast('「' + (pendingSheet.name || '注文シート') + '」の内容を入れました');
+      var n = applySheetToForm(form, pendingSheet, photoBox);
+      toast('「' + (pendingSheet.name || '注文シート') + '」の内容を入れました' +
+        (n ? '（写真' + n + '枚も）' : ''));
       pendingSheet = null;
     }
-    ['ref', 'self'].forEach(function (kind) { drawEditThumbs(kind); });
-
-    form.querySelectorAll('[data-upload]').forEach(function (input) {
-      input.addEventListener('change', function () {
-        var kind = input.dataset.upload;
-        var files = Array.prototype.slice.call(input.files || []);
-        input.value = '';
-        if (!files.length) return;
-        toast('画像を処理しています…');
-        // 並列で処理するので、順番は選んだときの添字で固定する
-        var base = Date.now();
-        Promise.all(files.map(function (f, i) {
-          return Photos.process(f).then(function (out) {
-            return {
-              id: uid(),
-              recordId: editId || null,
-              kind: kind,
-              full: out.full,
-              thumb: out.thumb,
-              width: out.width,
-              height: out.height,
-              caption: '',
-              createdAt: base + i
-            };
-          });
-        })).then(function (added) {
-          draftPhotos = draftPhotos.concat(added);
-          drawEditThumbs(kind);
-          toast(added.length + '枚追加しました');
-        }).catch(function (err) {
-          console.error(err);
-          toast('画像を読み込めませんでした');
-        });
-      });
-    });
-
-    function drawEditThumbs(kind) {
-      var slot = form.querySelector('[data-slot="' + kind + '"]');
-      var list = draftPhotos.filter(function (p) { return p.kind === kind; });
-      if (!list.length) {
-        slot.innerHTML = '<p class="muted">写真なし</p>';
-        return;
-      }
-      slot.innerHTML = '';
-      list.forEach(function (p) {
-        var fig = document.createElement('figure');
-        fig.className = 'photo';
-
-        var item = document.createElement('div');
-        item.className = 'thumb thumb--editable';
-        item.innerHTML = '<img src="' + objectURL(p.thumb || p.full) + '" alt="">' +
-          '<button type="button" class="thumb__del" title="削除">×</button>' +
-          '<button type="button" class="thumb__mask">' + icon('mask') + '顔を隠す</button>';
-
-        var capBtn = document.createElement('button');
-        capBtn.type = 'button';
-        capBtn.className = 'photo__capbtn' + (p.caption ? ' is-set' : '');
-        capBtn.textContent = p.caption || '向きを選ぶ';
-        capBtn.addEventListener('click', function () {
-          openCaptionPicker(p, function () { drawEditThumbs(kind); });
-        });
-
-        item.querySelector('.thumb__del').addEventListener('click', function () {
-          draftPhotos = draftPhotos.filter(function (x) { return x.id !== p.id; });
-          removed.push(p.id);
-          drawEditThumbs(kind);
-        });
-
-        item.querySelector('.thumb__mask').addEventListener('click', function () {
-          MaskEditor.open(p, function (out) {
-            p.full = out.full;
-            p.thumb = out.thumb;
-            p.width = out.width;
-            p.height = out.height;
-            p.masked = true;
-            drawEditThumbs(kind);
-            toast('顔を隠しました（保存すると確定します）');
-          }).catch(function (err) {
-            console.error(err);
-            toast('画像を開けませんでした');
-          });
-        });
-
-        fig.appendChild(item);
-        fig.appendChild(capBtn);
-        slot.appendChild(fig);
-      });
-    }
-
     form.querySelector('[data-action="cancel"]').addEventListener('click', function () {
       history.length > 1 ? history.back() : go('#/list');
     });
@@ -702,17 +602,9 @@
         updatedAt: Date.now()
       };
 
-      var photos = draftPhotos.map(function (p) {
-        return {
-          id: p.id, recordId: id, kind: p.kind, full: p.full, thumb: p.thumb,
-          width: p.width, height: p.height, masked: !!p.masked,
-          caption: p.caption || '', createdAt: p.createdAt
-        };
-      });
-
       DB.putRecord(record)
-        .then(function () { return DB.deletePhotos(removed); })
-        .then(function () { return DB.putPhotos(photos); })
+        .then(function () { return DB.deletePhotos(photoBox.removed()); })
+        .then(function () { return DB.putPhotos(photoBox.photosFor(id)); })
         .then(reload)
         .then(function () {
           toast(editId ? 'カルテを更新しました' : 'カルテを保存しました');
@@ -723,6 +615,142 @@
           toast('保存できませんでした：' + (err && err.name === 'QuotaExceededError' ? '端末の空き容量が足りません' : 'エラーが発生しました'));
         });
     });
+  }
+
+  /**
+   * 写真の追加・削除・キャプション・顔隠しをまとめて扱う。
+   * カルテと注文シートで同じものを使うので、持ち主の種類は問わない。
+   * ownerId: 編集中なら既存の写真を読み込む
+   * seedRefFrom: 「この内容で新規」のとき、参考モデルの写真だけ引き継ぐ元のID
+   */
+  function setupPhotos(form, ownerId, seedRefFrom) {
+    var draft = ownerId ? photosOf(ownerId).slice() : [];
+    var removed = [];
+
+    if (!ownerId && seedRefFrom) {
+      draft = photosOf(seedRefFrom, 'ref').map(copyPhoto);
+    }
+
+    ['ref', 'self'].forEach(draw);
+
+    form.querySelectorAll('[data-upload]').forEach(function (input) {
+      input.addEventListener('change', function () {
+        var kind = input.dataset.upload;
+        var files = Array.prototype.slice.call(input.files || []);
+        input.value = '';
+        if (!files.length) return;
+        toast('画像を処理しています…');
+        // 並列で処理するので、順番は選んだときの添字で固定する
+        var base = Date.now();
+        Promise.all(files.map(function (f, i) {
+          return Photos.process(f).then(function (out) {
+            return {
+              id: uid(),
+              recordId: ownerId || null,
+              kind: kind,
+              full: out.full,
+              thumb: out.thumb,
+              width: out.width,
+              height: out.height,
+              caption: '',
+              createdAt: base + i
+            };
+          });
+        })).then(function (added) {
+          draft = draft.concat(added);
+          draw(kind);
+          toast(added.length + '枚追加しました');
+        }).catch(function (err) {
+          console.error(err);
+          toast('画像を読み込めませんでした');
+        });
+      });
+    });
+
+    function draw(kind) {
+      var slot = form.querySelector('[data-slot-photos="' + kind + '"]');
+      if (!slot) return;
+      var list = draft.filter(function (p) { return p.kind === kind; });
+      if (!list.length) {
+        slot.innerHTML = '<p class="muted">写真なし</p>';
+        return;
+      }
+      slot.innerHTML = '';
+      list.forEach(function (p) {
+        var fig = document.createElement('figure');
+        fig.className = 'photo';
+
+        var item = document.createElement('div');
+        item.className = 'thumb thumb--editable';
+        item.innerHTML = '<img src="' + objectURL(p.thumb || p.full) + '" alt="">' +
+          '<button type="button" class="thumb__del" title="削除">×</button>' +
+          '<button type="button" class="thumb__mask">' + icon('mask') + '顔を隠す</button>';
+
+        var capBtn = document.createElement('button');
+        capBtn.type = 'button';
+        capBtn.className = 'photo__capbtn' + (p.caption ? ' is-set' : '');
+        capBtn.textContent = p.caption || '向きを選ぶ';
+        capBtn.addEventListener('click', function () {
+          openCaptionPicker(p, function () { draw(kind); });
+        });
+
+        item.querySelector('.thumb__del').addEventListener('click', function () {
+          draft = draft.filter(function (x) { return x.id !== p.id; });
+          removed.push(p.id);
+          draw(kind);
+        });
+
+        item.querySelector('.thumb__mask').addEventListener('click', function () {
+          MaskEditor.open(p, function (out) {
+            p.full = out.full;
+            p.thumb = out.thumb;
+            p.width = out.width;
+            p.height = out.height;
+            p.masked = true;
+            draw(kind);
+            toast('顔を隠しました（保存すると確定します）');
+          }).catch(function (err) {
+            console.error(err);
+            toast('画像を開けませんでした');
+          });
+        });
+
+        fig.appendChild(item);
+        fig.appendChild(capBtn);
+        slot.appendChild(fig);
+      });
+    }
+
+    return {
+      /** 保存用に、持ち主のIDを入れた配列を返す */
+      photosFor: function (id) {
+        return draft.map(function (p) {
+          return {
+            id: p.id, recordId: id, kind: p.kind, full: p.full, thumb: p.thumb,
+            width: p.width, height: p.height, masked: !!p.masked,
+            caption: p.caption || '', createdAt: p.createdAt
+          };
+        });
+      },
+      removed: function () { return removed; },
+      /** 注文シートを貼り付けたときに、参考モデルの写真を足す */
+      addRefFrom: function (srcId) {
+        var add = photosOf(srcId, 'ref').map(copyPhoto);
+        if (!add.length) return 0;
+        draft = draft.concat(add);
+        draw('ref');
+        return add.length;
+      }
+    };
+  }
+
+  /** 写真を別の持ち主にコピーする（中身は同じ Blob を共有してよい） */
+  function copyPhoto(p) {
+    return {
+      id: uid(), recordId: null, kind: p.kind, full: p.full, thumb: p.thumb,
+      width: p.width, height: p.height, masked: !!p.masked,
+      caption: p.caption || '', createdAt: Date.now()
+    };
   }
 
   /** お店とGoogleマップの紐付け */
@@ -977,10 +1005,12 @@
         return '<span class="chip">' + esc(z.label + ' ' + z.value) + '</span>';
       }).join('');
 
+      var cover = coverPhoto(sh.id);
       var card = document.createElement('a');
       card.className = 'card card--sheet';
       card.href = '#/sheet/' + sh.id;
       card.innerHTML =
+        (cover ? '<img class="card__img" src="' + objectURL(cover.thumb || cover.full) + '" alt="">' : '') +
         '<div class="card__body">' +
           '<h3 class="card__style">' + esc(sh.name || '（名前なし）') + '</h3>' +
           '<p class="card__salon">' + esc(sh.styleName || 'スタイル未設定') + '</p>' +
@@ -1022,6 +1052,9 @@
         esc(sh.orderNote).replace(/\n/g, '<br>') + '</p>';
     }
 
+    drawThumbs(root.querySelector('[data-f="photos-ref"]'), photosOf(sh.id, 'ref'), '参考モデルの写真はありません');
+    drawThumbs(root.querySelector('[data-f="photos-self"]'), photosOf(sh.id, 'self'), '自分の写真はありません');
+
     var text = orderSheet(sh);
     root.querySelector('[data-f="orderPaper"]').textContent = text || '内容がまだありません。';
 
@@ -1037,7 +1070,7 @@
     });
 
     root.querySelector('[data-action="delete-sheet"]').addEventListener('click', function () {
-      if (!confirm('この注文シートを削除します。よろしいですか？')) return;
+      if (!confirm('この注文シートを削除します。写真も一緒に消えます。よろしいですか？')) return;
       DB.deleteSheet(sh.id).then(reload).then(function () {
         toast('注文シートを削除しました');
         go('#/sheets');
@@ -1063,6 +1096,7 @@
 
     setupHeadMap(form);
     setupStyleSelect(form);
+    var photoBox = setupPhotos(form, editId, null);
 
     form.querySelector('[data-action="cancel"]').addEventListener('click', function () {
       history.length > 1 ? history.back() : go('#/sheets');
@@ -1085,7 +1119,10 @@
       sheet.createdAt = base ? base.createdAt : Date.now();
       sheet.updatedAt = Date.now();
 
-      DB.putSheet(sheet).then(reload).then(function () {
+      DB.putSheet(sheet)
+        .then(function () { return DB.deletePhotos(photoBox.removed()); })
+        .then(function () { return DB.putPhotos(photoBox.photosFor(id)); })
+        .then(reload).then(function () {
         toast(editId ? '注文シートを更新しました' : '注文シートを保存しました');
         go('#/sheet/' + id);
       }).catch(function (err) {
@@ -1096,7 +1133,7 @@
   }
 
   /* 注文シートをカルテのフォームに写す */
-  function applySheetToForm(form, sh) {
+  function applySheetToForm(form, sh, photoBox) {
     ORDER_FIELDS.forEach(function (k) {
       if (form.elements[k]) form.elements[k].value = sh[k] == null ? '' : sh[k];
     });
@@ -1109,9 +1146,12 @@
       });
       if (filled) d.open = true;
     });
+
+    // 参考モデルの写真も一緒に持ってくる（自分の写真はこれから撮るので写さない）
+    return photoBox ? photoBox.addRefFrom(sh.id) : 0;
   }
 
-  function openSheetPicker(form) {
+  function openSheetPicker(form, photoBox) {
     if (!state.sheets.length) {
       toast('注文シートがまだありません');
       return;
@@ -1129,8 +1169,8 @@
         '<span class="pickitem__sub">' + esc(sh.styleName || 'スタイル未設定') + '</span>';
       b.addEventListener('click', function () {
         box.hidden = true;
-        applySheetToForm(form, sh);
-        toast('「' + (sh.name || '注文シート') + '」を貼り付けました');
+        var n = applySheetToForm(form, sh, photoBox);
+        toast('「' + (sh.name || '注文シート') + '」を貼り付けました' + (n ? '（写真' + n + '枚も）' : ''));
       });
       list.appendChild(b);
     });
