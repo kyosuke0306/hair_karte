@@ -377,7 +377,43 @@ dl, dd, dt { margin: 0; }
 .photogroup + .photogroup { margin-top: 14px; }
 .photogroup__label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
 
-.thumbs { display: flex; flex-wrap: wrap; gap: 8px; }
+.thumbs { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* 写真 + キャプション */
+.photo { margin: 0; display: grid; gap: 4px; width: 104px; }
+
+.photo__cap {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.photo__capbtn {
+  appearance: none;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px dashed var(--line);
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 8px;
+  padding: 4px 6px;
+  cursor: pointer;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.photo__capbtn.is-set {
+  border-style: solid;
+  border-color: transparent;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
 
 .thumb {
   position: relative;
@@ -891,7 +927,21 @@ select.input {
 }
 
 .lightbox[hidden] { display: none; }
-.lightbox__img { max-width: 100%; max-height: 90vh; border-radius: 8px; }
+.lightbox__img { max-width: 100%; max-height: 82vh; border-radius: 8px; }
+
+.lightbox__cap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  text-align: center;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, .7);
+}
+
+.lightbox__cap[hidden] { display: none; }
 
 .lightbox__close {
   position: absolute;

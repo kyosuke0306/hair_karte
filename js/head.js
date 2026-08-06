@@ -202,9 +202,10 @@
     });
   }
 
-  /* ---------------- 値の選択シート ---------------- */
+  /* ---------------- 値の選択シート（部位図・写真のキャプションで共用） ---------------- */
 
   var sheet = null;
+  var pending = null;
 
   function buildSheet() {
     if (sheet) return sheet;
@@ -222,7 +223,7 @@
         '<div class="sheet__presets" data-f="presets"></div>' +
         '<label class="field">' +
           '<span class="field__label">自由に入力</span>' +
-          '<input class="input" type="text" data-f="free" placeholder="例）6mm・耳の高さまで">' +
+          '<input class="input" type="text" data-f="free">' +
         '</label>' +
         '<div class="sheet__foot">' +
           '<button class="btn" type="button" data-act="clear">クリア</button>' +
@@ -235,8 +236,8 @@
       var act = e.target.closest('[data-act]');
       if (!act) return;
       if (act.dataset.act === 'close') close();
-      if (act.dataset.act === 'clear') { finish(''); }
-      if (act.dataset.act === 'ok') { finish(sheet.querySelector('[data-f="free"]').value.trim()); }
+      if (act.dataset.act === 'clear') finish('');
+      if (act.dataset.act === 'ok') finish(sheet.querySelector('[data-f="free"]').value.trim());
     });
 
     document.addEventListener('keydown', function (e) {
@@ -246,25 +247,24 @@
     return sheet;
   }
 
-  var pending = null;
-
-  function openPicker(key, current, cb) {
-    var z = ZONES[key];
-    if (!z) return;
+  /** opts: { title, hint, presets, current, placeholder, onPick } */
+  function openSheet(opts) {
     buildSheet();
-    pending = cb;
+    pending = opts.onPick;
 
-    sheet.querySelector('[data-f="title"]').textContent = z.label;
-    sheet.querySelector('[data-f="hint"]').textContent = z.hint;
+    sheet.querySelector('[data-f="title"]').textContent = opts.title || '';
+    sheet.querySelector('[data-f="hint"]').textContent = opts.hint || '';
+
     var free = sheet.querySelector('[data-f="free"]');
-    free.value = current || '';
+    free.value = opts.current || '';
+    free.placeholder = opts.placeholder || '';
 
     var box = sheet.querySelector('[data-f="presets"]');
     box.innerHTML = '';
-    z.presets.forEach(function (p) {
+    (opts.presets || []).forEach(function (p) {
       var b = document.createElement('button');
       b.type = 'button';
-      b.className = 'preset' + (p === current ? ' is-on' : '');
+      b.className = 'preset' + (p === opts.current ? ' is-on' : '');
       b.textContent = p;
       b.addEventListener('click', function () { finish(p); });
       box.appendChild(b);
@@ -284,6 +284,19 @@
     pending = null;
   }
 
+  function openPicker(key, current, cb) {
+    var z = ZONES[key];
+    if (!z) return;
+    openSheet({
+      title: z.label,
+      hint: z.hint,
+      presets: z.presets,
+      current: current,
+      placeholder: '例）6mm・耳の高さまで',
+      onPick: cb
+    });
+  }
+
   /** 記録済みの部位を「ラベル: 値」の配列で返す（一覧のチップなどに使う） */
   function summary(values) {
     var out = [];
@@ -300,4 +313,7 @@
     order: ORDER,
     close: close
   };
+
+  /* 汎用の選択シート。写真のキャプションなど部位図以外からも使う。 */
+  global.Picker = { open: openSheet, close: close };
 })(window);

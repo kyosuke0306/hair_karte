@@ -92,6 +92,20 @@
     return '<svg class="ico" aria-hidden="true"><use href="#i-' + name + '"></use></svg>';
   }
 
+  /* 写真の向き。よく使うものをボタンで選べるようにする */
+  var PHOTO_CAPTIONS = ['正面', '斜め', '横', '後ろ', 'トップ（つむじ）', '全体'];
+
+  function openCaptionPicker(photo, done) {
+    Picker.open({
+      title: '写真の向き',
+      hint: 'どこから撮った写真か',
+      presets: PHOTO_CAPTIONS,
+      current: photo.caption || '',
+      placeholder: '例）右サイド',
+      onPick: function (v) { photo.caption = v; done(); }
+    });
+  }
+
   function yen(n) {
     if (n == null || n === '') return '';
     return Number(n).toLocaleString('ja-JP') + '円';
@@ -395,12 +409,16 @@
     }
     container.innerHTML = '';
     photos.forEach(function (p) {
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'thumb';
-      btn.innerHTML = '<img src="' + objectURL(p.thumb || p.full) + '" alt="">';
-      btn.addEventListener('click', function () { openLightbox(p); });
-      container.appendChild(btn);
+      var fig = document.createElement('figure');
+      fig.className = 'photo';
+      fig.innerHTML =
+        '<button type="button" class="thumb">' +
+          '<img src="' + objectURL(p.thumb || p.full) + '" alt="' + esc(p.caption || '') + '">' +
+        '</button>' +
+        '<figcaption class="photo__cap">' + esc(p.caption || '') + '</figcaption>';
+      if (!p.caption) fig.querySelector('.photo__cap').hidden = true;
+      fig.querySelector('.thumb').addEventListener('click', function () { openLightbox(p); });
+      container.appendChild(fig);
     });
   }
 
@@ -428,6 +446,9 @@
   function openLightbox(photo) {
     var img = lightbox.querySelector('.lightbox__img');
     img.src = objectURL(photo.full || photo.thumb);
+    var cap = lightbox.querySelector('.lightbox__cap');
+    cap.textContent = photo.caption || '';
+    cap.hidden = !photo.caption;
     lightbox.hidden = false;
   }
 
@@ -435,6 +456,7 @@
     if (lightbox.hidden) return;
     lightbox.hidden = true;
     lightbox.querySelector('.lightbox__img').removeAttribute('src');
+    lightbox.querySelector('.lightbox__cap').textContent = '';
   }
 
   lightbox.addEventListener('click', closeLightbox);
@@ -466,7 +488,8 @@
       draftPhotos = photosOf(copyFromId, 'ref').map(function (p) {
         return {
           id: uid(), recordId: null, kind: 'ref', full: p.full, thumb: p.thumb,
-          width: p.width, height: p.height, masked: !!p.masked, createdAt: Date.now()
+          width: p.width, height: p.height, masked: !!p.masked,
+          caption: p.caption || '', createdAt: Date.now()
         };
       });
     }
@@ -497,7 +520,9 @@
         input.value = '';
         if (!files.length) return;
         toast('画像を処理しています…');
-        Promise.all(files.map(function (f) {
+        // 並列で処理するので、順番は選んだときの添字で固定する
+        var base = Date.now();
+        Promise.all(files.map(function (f, i) {
           return Photos.process(f).then(function (out) {
             return {
               id: uid(),
@@ -507,7 +532,8 @@
               thumb: out.thumb,
               width: out.width,
               height: out.height,
-              createdAt: Date.now() + draftPhotos.length
+              caption: '',
+              createdAt: base + i
             };
           });
         })).then(function (added) {
@@ -530,11 +556,22 @@
       }
       slot.innerHTML = '';
       list.forEach(function (p) {
+        var fig = document.createElement('figure');
+        fig.className = 'photo';
+
         var item = document.createElement('div');
         item.className = 'thumb thumb--editable';
         item.innerHTML = '<img src="' + objectURL(p.thumb || p.full) + '" alt="">' +
           '<button type="button" class="thumb__del" title="削除">×</button>' +
           '<button type="button" class="thumb__mask">' + icon('mask') + '顔を隠す</button>';
+
+        var capBtn = document.createElement('button');
+        capBtn.type = 'button';
+        capBtn.className = 'photo__capbtn' + (p.caption ? ' is-set' : '');
+        capBtn.textContent = p.caption || '向きを選ぶ';
+        capBtn.addEventListener('click', function () {
+          openCaptionPicker(p, function () { drawEditThumbs(kind); });
+        });
 
         item.querySelector('.thumb__del').addEventListener('click', function () {
           draftPhotos = draftPhotos.filter(function (x) { return x.id !== p.id; });
@@ -557,7 +594,9 @@
           });
         });
 
-        slot.appendChild(item);
+        fig.appendChild(item);
+        fig.appendChild(capBtn);
+        slot.appendChild(fig);
       });
     }
 
@@ -605,7 +644,8 @@
       var photos = draftPhotos.map(function (p) {
         return {
           id: p.id, recordId: id, kind: p.kind, full: p.full, thumb: p.thumb,
-          width: p.width, height: p.height, masked: !!p.masked, createdAt: p.createdAt
+          width: p.width, height: p.height, masked: !!p.masked,
+          caption: p.caption || '', createdAt: p.createdAt
         };
       });
 
@@ -865,7 +905,8 @@
       ]).then(function (d) {
         return {
           id: p.id, recordId: p.recordId, kind: p.kind,
-          width: p.width, height: p.height, masked: !!p.masked, createdAt: p.createdAt,
+          width: p.width, height: p.height, masked: !!p.masked,
+          caption: p.caption || '', createdAt: p.createdAt,
           full: d[0], thumb: d[1]
         };
       });
@@ -909,7 +950,8 @@
       var photos = (data.photos || []).map(function (p) {
         return {
           id: p.id, recordId: p.recordId, kind: p.kind,
-          width: p.width, height: p.height, masked: !!p.masked, createdAt: p.createdAt,
+          width: p.width, height: p.height, masked: !!p.masked,
+          caption: p.caption || '', createdAt: p.createdAt,
           full: p.full ? Photos.dataURLtoBlob(p.full) : null,
           thumb: p.thumb ? Photos.dataURLtoBlob(p.thumb) : null
         };
