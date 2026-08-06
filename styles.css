@@ -116,7 +116,7 @@ body {
     "Noto Sans JP", "Yu Gothic", Meiryo, sans-serif;
   font-size: 15px;
   line-height: 1.65;
-  padding-bottom: 112px;
+  padding-bottom: calc(84px + env(safe-area-inset-bottom));
 }
 
 h1, h2, h3, h4 { margin: 0; line-height: 1.35; }
@@ -148,20 +148,37 @@ dl, dd, dt { margin: 0; }
   gap: 7px;
 }
 
-.tabs { display: flex; gap: 4px; margin-top: 8px; }
+/* ============ 下部タブバー ============ */
+.tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom);
+}
 
 .tab {
   flex: 1;
-  text-align: center;
-  padding: 9px 4px;
-  font-size: 13px;
-  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 8px 2px 6px;
   color: var(--text-muted);
   text-decoration: none;
-  border-bottom: 2px solid transparent;
+  min-height: 54px;
 }
 
-.tab.is-active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab__ico { width: 22px; height: 22px; }
+.tab__label { font-size: 10px; font-weight: 600; letter-spacing: .02em; }
+.tab.is-active { color: var(--accent); }
+.tab.is-active .tab__ico { transform: translateY(-1px); }
 
 .main { max-width: var(--maxw); margin: 0 auto; padding: 16px; }
 
@@ -278,6 +295,35 @@ dl, dd, dt { margin: 0; }
 
 .nohit, .muted { color: var(--text-muted); font-size: 13px; }
 
+.view-head { margin-bottom: 14px; }
+.view__lead { font-size: 12px; color: var(--text-muted); margin-top: 4px; line-height: 1.7; }
+
+.cards--sheets { grid-template-columns: 1fr; }
+
+.card--sheet { align-items: center; }
+.card--sheet .card__style { font-size: 16px; }
+.card__go { color: var(--text-muted); transform: rotate(180deg); display: flex; }
+
+.pasterow { margin: 0 0 14px; }
+
+.picklist { display: grid; gap: 8px; margin: 14px 0 4px; }
+
+.pickitem {
+  appearance: none;
+  font: inherit;
+  text-align: left;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  display: grid;
+  gap: 2px;
+}
+
+.pickitem__name { font-size: 15px; font-weight: 700; color: var(--text); }
+.pickitem__sub { font-size: 12px; color: var(--text-muted); }
+
 /* ============ 空状態 ============ */
 .empty { text-align: center; padding: 48px 16px; }
 .empty__icon { line-height: 0; }
@@ -314,21 +360,22 @@ dl, dd, dt { margin: 0; }
 .fab {
   position: fixed;
   right: max(16px, env(safe-area-inset-right));
-  bottom: calc(20px + env(safe-area-inset-bottom));
+  bottom: calc(74px + env(safe-area-inset-bottom));
   width: 58px;
   height: 58px;
   border-radius: 50%;
   border: none;
   background: var(--accent);
   color: var(--on-accent);
-  font-size: 30px;
-  line-height: 1;
+  display: grid;
+  place-items: center;
   box-shadow: 0 6px 20px rgba(0, 0, 0, .25);
   cursor: pointer;
   z-index: 30;
 }
 
 .fab[hidden] { display: none; }
+.fab .ico { width: 26px; height: 26px; }
 
 /* ============ 詳細 ============ */
 .detail-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; }
@@ -1104,7 +1151,7 @@ select.input {
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  bottom: calc(90px + env(safe-area-inset-bottom));
+  bottom: calc(140px + env(safe-area-inset-bottom));
   background: var(--text);
   color: var(--bg);
   font-size: 13px;

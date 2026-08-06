@@ -10,11 +10,21 @@
   var state = {
     records: [],
     photos: [],          // 全写真のメタ + Blob
+    sheets: [],          // 注文シート（お店や日付を持たない雛形）
     query: '',
     sort: 'date-desc'
   };
 
+  /* カルテと注文シートで共通の「注文の内容」の項目 */
+  var ORDER_FIELDS = [
+    'styleName', 'lengthGenre', 'topLen', 'frontLen', 'sideMm', 'sideburnMm',
+    'backMm', 'fadeHeight', 'thinning', 'perm', 'color', 'styling', 'orderNote'
+  ];
+
+  var pendingSheet = null;   // 「このシートでカルテを作る」で持ち越す内容
+
   var urls = [];         // 表示中の ObjectURL。画面を切り替えるたびに開放する
+  var fabTarget = '#/new';
   var toastTimer = null;
 
   /* ---------------- ユーティリティ ---------------- */
@@ -116,9 +126,10 @@
   /* ---------------- データ読み込み ---------------- */
 
   function reload() {
-    return Promise.all([DB.allRecords(), DB.allPhotos()]).then(function (res) {
+    return Promise.all([DB.allRecords(), DB.allPhotos(), DB.allSheets()]).then(function (res) {
       state.records = res[0];
       state.photos = res[1];
+      state.sheets = res[2];
     });
   }
 
@@ -171,6 +182,7 @@
   function route() {
     closeLightbox();
     closeMapSheet();
+    closeSheetPicker();
     if (window.HeadMap) HeadMap.close();
     releaseURLs();
     var hash = location.hash || '#/list';
@@ -178,19 +190,29 @@
     var view = parts[0] || 'list';
     var id = parts[1] || null;
 
+    var group = {
+      detail: 'list', new: 'list', edit: 'list',
+      sheet: 'sheets', 'sheet-new': 'sheets', 'sheet-edit': 'sheets'
+    }[view] || view;
+
     document.querySelectorAll('.tab').forEach(function (t) {
-      t.classList.toggle('is-active', t.dataset.view === view ||
-        (view === 'detail' && t.dataset.view === 'list') ||
-        (view === 'new' && t.dataset.view === 'list') ||
-        (view === 'edit' && t.dataset.view === 'list'));
+      t.classList.toggle('is-active', t.dataset.view === group);
     });
 
-    fab.hidden = (view === 'new' || view === 'edit');
+    // 追加ボタンは「カルテ」と「注文シート」でだけ出す
+    fabTarget = group === 'sheets' ? '#/sheet-new' : '#/new';
+    fab.hidden = !(group === 'list' || group === 'sheets') ||
+      view === 'new' || view === 'edit' || view === 'sheet-new' || view === 'sheet-edit';
+    fab.title = group === 'sheets' ? '新しい注文シートを追加' : '新しいカルテを追加';
     window.scrollTo(0, 0);
 
     if (view === 'detail' && id) return renderDetail(id);
     if (view === 'new') return renderForm(null, id);
     if (view === 'edit' && id) return renderForm(id, null);
+    if (view === 'sheets') return renderSheets();
+    if (view === 'sheet' && id) return renderSheetDetail(id);
+    if (view === 'sheet-new') return renderSheetForm(null);
+    if (view === 'sheet-edit' && id) return renderSheetForm(id);
     if (view === 'stats') return renderStats();
     if (view === 'settings') return renderSettings();
     return renderList();
@@ -200,6 +222,12 @@
     var tpl = document.getElementById(tplId);
     main.innerHTML = '';
     main.appendChild(tpl.content.cloneNode(true));
+
+    // 「髪型の注文」はカルテと注文シートで同じものを使う
+    var slot = main.querySelector('[data-slot="order-fields"]');
+    if (slot) {
+      slot.replaceWith(document.getElementById('tpl-order-fields').content.cloneNode(true));
+    }
     return main;
   }
 
@@ -530,6 +558,16 @@
     setupHeadMap(form);
     setupStyleSelect(form);
     setupMapLink(form);
+
+    form.querySelector('[data-action="paste-sheet"]')
+      .addEventListener('click', function () { openSheetPicker(form); });
+
+    // 「このシートでカルテを作る」から来たとき
+    if (!editId && pendingSheet) {
+      applySheetToForm(form, pendingSheet);
+      toast('「' + (pendingSheet.name || '注文シート') + '」の内容を入れました');
+      pendingSheet = null;
+    }
     ['ref', 'self'].forEach(function (kind) { drawEditThumbs(kind); });
 
     form.querySelectorAll('[data-upload]').forEach(function (input) {
@@ -921,6 +959,195 @@
     }
   }
 
+  /* ---------------- 注文シート ---------------- */
+
+  function renderSheets() {
+    mount('tpl-sheets');
+
+    var wrap = document.getElementById('sheet-cards');
+    var empty = document.getElementById('sheet-empty');
+    empty.hidden = state.sheets.length !== 0;
+    empty.querySelector('[data-action="new-sheet"]')
+      .addEventListener('click', function () { go('#/sheet-new'); });
+
+    wrap.innerHTML = '';
+    state.sheets.forEach(function (sh) {
+      var chips = HeadMap.summary(sh).slice(0, 4).map(function (z) {
+        return '<span class="chip">' + esc(z.label + ' ' + z.value) + '</span>';
+      }).join('');
+
+      var card = document.createElement('a');
+      card.className = 'card card--sheet';
+      card.href = '#/sheet/' + sh.id;
+      card.innerHTML =
+        '<div class="card__body">' +
+          '<h3 class="card__style">' + esc(sh.name || '（名前なし）') + '</h3>' +
+          '<p class="card__salon">' + esc(sh.styleName || 'スタイル未設定') + '</p>' +
+          '<div class="chips">' + chips + '</div>' +
+        '</div>' +
+        '<span class="card__go">' + icon('back') + '</span>';
+      wrap.appendChild(card);
+    });
+  }
+
+  function renderSheetDetail(id) {
+    var sh = state.sheets.filter(function (x) { return x.id === id; })[0];
+    if (!sh) { go('#/sheets'); return; }
+
+    mount('tpl-sheet-detail');
+    var root = main;
+
+    root.querySelector('[data-f="name"]').textContent = sh.name || '（名前なし）';
+    root.querySelector('[data-f="meta"]').textContent =
+      [sh.styleName, sh.lengthGenre].filter(Boolean).join(' ・ ') || 'スタイル未設定';
+
+    HeadMap.render(root.querySelector('#sheet-headmap'), sh, { editable: false });
+
+    var specs = [
+      ['長さ感', sh.lengthGenre],
+      ['量感調整', sh.thinning],
+      ['パーマ', sh.perm],
+      ['カラー', sh.color],
+      ['スタイリング', sh.styling]
+    ].filter(function (row) { return row[1]; });
+    root.querySelector('[data-f="specs"]').innerHTML = specs.map(function (row) {
+      return '<div class="speclist__row"><dt>' + esc(row[0]) + '</dt><dd>' + esc(row[1]) + '</dd></div>';
+    }).join('');
+
+    var noteBox = root.querySelector('[data-f="orderNote"]');
+    if (sh.orderNote) {
+      noteBox.hidden = false;
+      noteBox.innerHTML = '<h4 class="notebox__title">伝えたいこと</h4><p>' +
+        esc(sh.orderNote).replace(/\n/g, '<br>') + '</p>';
+    }
+
+    var text = orderSheet(sh);
+    root.querySelector('[data-f="orderPaper"]').textContent = text || '内容がまだありません。';
+
+    root.querySelector('[data-action="back"]').addEventListener('click', function () { go('#/sheets'); });
+    root.querySelector('[data-action="edit-sheet"]').addEventListener('click', function () { go('#/sheet-edit/' + sh.id); });
+    root.querySelector('[data-action="copy-order"]').addEventListener('click', function () {
+      copyText(text || '（内容がありません）');
+    });
+
+    root.querySelector('[data-action="use-sheet"]').addEventListener('click', function () {
+      pendingSheet = sh;
+      go('#/new');
+    });
+
+    root.querySelector('[data-action="delete-sheet"]').addEventListener('click', function () {
+      if (!confirm('この注文シートを削除します。よろしいですか？')) return;
+      DB.deleteSheet(sh.id).then(reload).then(function () {
+        toast('注文シートを削除しました');
+        go('#/sheets');
+      });
+    });
+  }
+
+  function renderSheetForm(editId) {
+    mount('tpl-sheet-form');
+    var form = document.getElementById('sheet-form');
+    var base = editId ? state.sheets.filter(function (x) { return x.id === editId; })[0] : null;
+    if (editId && !base) { go('#/sheets'); return; }
+
+    document.getElementById('sheet-form-title').textContent = editId ? '注文シートを編集' : '新しい注文シート';
+    fillDatalists();
+
+    if (base) {
+      form.elements.name.value = base.name || '';
+      ORDER_FIELDS.forEach(function (k) {
+        if (form.elements[k]) form.elements[k].value = base[k] == null ? '' : base[k];
+      });
+    }
+
+    setupHeadMap(form);
+    setupStyleSelect(form);
+
+    form.querySelector('[data-action="cancel"]').addEventListener('click', function () {
+      history.length > 1 ? history.back() : go('#/sheets');
+    });
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var name = form.elements.name.value.trim();
+      if (!name) {
+        toast('シートの名前を入力してください');
+        form.elements.name.focus();
+        return;
+      }
+
+      var id = editId || uid();
+      var sheet = { id: id, name: name };
+      ORDER_FIELDS.forEach(function (k) {
+        sheet[k] = form.elements[k] ? form.elements[k].value.trim() : '';
+      });
+      sheet.createdAt = base ? base.createdAt : Date.now();
+      sheet.updatedAt = Date.now();
+
+      DB.putSheet(sheet).then(reload).then(function () {
+        toast(editId ? '注文シートを更新しました' : '注文シートを保存しました');
+        go('#/sheet/' + id);
+      }).catch(function (err) {
+        console.error(err);
+        toast('保存できませんでした');
+      });
+    });
+  }
+
+  /* 注文シートをカルテのフォームに写す */
+  function applySheetToForm(form, sh) {
+    ORDER_FIELDS.forEach(function (k) {
+      if (form.elements[k]) form.elements[k].value = sh[k] == null ? '' : sh[k];
+    });
+    setupHeadMap(form);
+    setupStyleSelect(form);
+    // 折りたたみの中に値が入ったときは開いておく
+    form.querySelectorAll('details').forEach(function (d) {
+      var filled = Array.prototype.some.call(d.querySelectorAll('input, textarea, select'), function (el) {
+        return el.value && el.value.trim();
+      });
+      if (filled) d.open = true;
+    });
+  }
+
+  function openSheetPicker(form) {
+    if (!state.sheets.length) {
+      toast('注文シートがまだありません');
+      return;
+    }
+    var box = document.getElementById('picksheet');
+    var list = box.querySelector('[data-f="list"]');
+    list.innerHTML = '';
+
+    state.sheets.forEach(function (sh) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'pickitem';
+      b.innerHTML =
+        '<span class="pickitem__name">' + esc(sh.name || '（名前なし）') + '</span>' +
+        '<span class="pickitem__sub">' + esc(sh.styleName || 'スタイル未設定') + '</span>';
+      b.addEventListener('click', function () {
+        box.hidden = true;
+        applySheetToForm(form, sh);
+        toast('「' + (sh.name || '注文シート') + '」を貼り付けました');
+      });
+      list.appendChild(b);
+    });
+
+    if (!box.dataset.bound) {
+      box.dataset.bound = '1';
+      box.addEventListener('click', function (e) {
+        if (e.target.closest('[data-act="close"]')) box.hidden = true;
+      });
+    }
+    box.hidden = false;
+  }
+
+  function closeSheetPicker() {
+    var box = document.getElementById('picksheet');
+    if (box) box.hidden = true;
+  }
+
   /* ---------------- 記録（統計） ---------------- */
 
   function renderStats() {
@@ -1055,7 +1282,7 @@
     });
 
     main.querySelector('[data-action="wipe"]').addEventListener('click', function () {
-      if (!confirm('すべてのカルテと写真を削除します。元に戻せません。よろしいですか？')) return;
+      if (!confirm('すべてのカルテ・注文シート・写真を削除します。元に戻せません。よろしいですか？')) return;
       if (!confirm('本当に削除しますか？')) return;
       DB.clearAll().then(reload).then(function () {
         toast('すべてのデータを削除しました');
@@ -1069,6 +1296,7 @@
     }, 0);
     var lines = [
       ['カルテ', state.records.length + '件'],
+      ['注文シート', state.sheets.length + '件'],
       ['写真', state.photos.length + '枚'],
       ['写真の容量', (photoBytes / 1048576).toFixed(1) + ' MB']
     ];
@@ -1103,9 +1331,10 @@
     })).then(function (photos) {
       var payload = {
         app: 'hair_karte',
-        version: 1,
+        version: 2,
         exportedAt: new Date().toISOString(),
         records: state.records,
+        sheets: state.sheets,
         photos: photos
       };
       var blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
@@ -1135,7 +1364,11 @@
         toast('ヘアカルテのバックアップファイルではないようです');
         return;
       }
-      if (!confirm('カルテ ' + data.records.length + '件を読み込みます。同じIDのカルテは上書きされます。よろしいですか？')) return;
+      var sheetCount = Array.isArray(data.sheets) ? data.sheets.length : 0;
+      var msg = 'カルテ ' + data.records.length + '件' +
+        (sheetCount ? '・注文シート ' + sheetCount + '件' : '') +
+        'を読み込みます。同じIDのものは上書きされます。よろしいですか？';
+      if (!confirm(msg)) return;
 
       var photos = (data.photos || []).map(function (p) {
         return {
@@ -1147,7 +1380,10 @@
         };
       });
 
+      var sheets = Array.isArray(data.sheets) ? data.sheets : [];
+
       Promise.all(data.records.map(function (r) { return DB.putRecord(r); }))
+        .then(function () { return Promise.all(sheets.map(function (sh) { return DB.putSheet(sh); })); })
         .then(function () { return DB.putPhotos(photos); })
         .then(reload)
         .then(function () {
@@ -1173,7 +1409,7 @@
 
   /* ---------------- 起動 ---------------- */
 
-  fab.addEventListener('click', function () { go('#/new'); });
+  fab.addEventListener('click', function () { go(fabTarget); });
   window.addEventListener('hashchange', route);
 
   applyTheme();

@@ -3,7 +3,7 @@
   'use strict';
 
   var DB_NAME = 'hair_karte';
-  var DB_VERSION = 1;
+  var DB_VERSION = 2;
   var dbPromise = null;
 
   function open() {
@@ -19,6 +19,10 @@
         if (!db.objectStoreNames.contains('photos')) {
           var photos = db.createObjectStore('photos', { keyPath: 'id' });
           photos.createIndex('recordId', 'recordId');
+        }
+        // 注文シート（お店や日付を持たない、髪型の注文内容だけの雛形）
+        if (!db.objectStoreNames.contains('sheets')) {
+          db.createObjectStore('sheets', { keyPath: 'id' });
         }
       };
       req.onsuccess = function () { resolve(req.result); };
@@ -115,10 +119,35 @@
       });
     },
 
+    /* ---- 注文シート ---- */
+
+    allSheets: function () {
+      return tx(['sheets'], 'readonly').then(function (t) {
+        return wrap(t.objectStore('sheets').getAll());
+      }).then(function (rows) {
+        return rows.sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
+      });
+    },
+
+    putSheet: function (sheet) {
+      return tx(['sheets'], 'readwrite').then(function (t) {
+        t.objectStore('sheets').put(sheet);
+        return done(t);
+      }).then(function () { return sheet; });
+    },
+
+    deleteSheet: function (id) {
+      return tx(['sheets'], 'readwrite').then(function (t) {
+        t.objectStore('sheets').delete(id);
+        return done(t);
+      });
+    },
+
     clearAll: function () {
-      return tx(['records', 'photos'], 'readwrite').then(function (t) {
+      return tx(['records', 'photos', 'sheets'], 'readwrite').then(function (t) {
         t.objectStore('records').clear();
         t.objectStore('photos').clear();
+        t.objectStore('sheets').clear();
         return done(t);
       });
     }

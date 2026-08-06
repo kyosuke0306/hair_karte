@@ -66,6 +66,41 @@
     <path d="M15 4.5L7.5 12l7.5 7.5"/>
   </symbol>
 
+  <symbol id="i-karte" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="4" y="3" width="16" height="18" rx="3"/>
+    <path d="M8.5 8.5h7M8.5 12.5h7M8.5 16.5h4"/>
+  </symbol>
+
+  <symbol id="i-sheet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 2.8h8.5L19 7.3V21a1 1 0 01-1 1H6a1 1 0 01-1-1V3.8a1 1 0 011-1z"/>
+    <path d="M14 3v4.5h4.5"/>
+    <path d="M8.5 13h7M8.5 17h4.5"/>
+  </symbol>
+
+  <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 20h16"/>
+    <path d="M7 20v-6M12 20V6M17 20v-9"/>
+  </symbol>
+
+  <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="3.2"/>
+    <path d="M19.4 14.4a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-1.8-.3 1.6 1.6 0 00-1 1.5V21a2 2 0 11-4 0v-.2a1.6 1.6 0 00-1-1.5 1.6 1.6 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00.3-1.8 1.6 1.6 0 00-1.5-1H3a2 2 0 110-4h.2a1.6 1.6 0 001.5-1 1.6 1.6 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 001.8.3H9a1.6 1.6 0 001-1.5V3a2 2 0 114 0v.2a1.6 1.6 0 001 1.5 1.6 1.6 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 1.8V9a1.6 1.6 0 001.5 1H21a2 2 0 110 4h-.2a1.6 1.6 0 00-1.5 1z"/>
+  </symbol>
+
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+    <path d="M12 5v14M5 12h14"/>
+  </symbol>
+
+  <symbol id="i-paste" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 4h6M9 4a2 2 0 00-2 2H6a2 2 0 00-2 2v11a2 2 0 002 2h12a2 2 0 002-2V8a2 2 0 00-2-2h-1a2 2 0 00-2-2"/>
+    <path d="M8.5 13h7M8.5 16.5h4.5"/>
+  </symbol>
+
+  <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 6.5h16M9.5 6.5V4.8a1 1 0 011-1h3a1 1 0 011 1v1.7"/>
+    <path d="M6.5 6.5l.8 12.2a1.5 1.5 0 001.5 1.4h6.4a1.5 1.5 0 001.5-1.4l.8-12.2"/>
+  </symbol>
+
   <symbol id="i-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">
     <path d="M12 21.5s7-6.2 7-11.5a7 7 0 10-14 0c0 5.3 7 11.5 7 11.5z"/>
     <circle cx="12" cy="10" r="2.6"/>
@@ -86,17 +121,33 @@
 <header class="app-header">
   <div class="app-header__inner">
     <h1 class="app-title"><svg class="ico ico--logo" aria-hidden="true"><use href="#i-logo"></use></svg><span>ヘアカルテ</span></h1>
-    <nav class="tabs" id="tabs">
-      <a class="tab" href="#/list" data-view="list">カルテ</a>
-      <a class="tab" href="#/stats" data-view="stats">記録</a>
-      <a class="tab" href="#/settings" data-view="settings">設定</a>
-    </nav>
   </div>
 </header>
 
 <main id="main" class="main"></main>
 
-<button class="fab" id="fab" type="button" title="新しいカルテを追加">＋</button>
+<button class="fab" id="fab" type="button" title="新しく追加">
+  <svg class="ico" aria-hidden="true"><use href="#i-plus"></use></svg>
+</button>
+
+<nav class="tabbar" id="tabs">
+  <a class="tab" href="#/list" data-view="list">
+    <svg class="ico tab__ico" aria-hidden="true"><use href="#i-karte"></use></svg>
+    <span class="tab__label">カルテ</span>
+  </a>
+  <a class="tab" href="#/sheets" data-view="sheets">
+    <svg class="ico tab__ico" aria-hidden="true"><use href="#i-sheet"></use></svg>
+    <span class="tab__label">注文シート</span>
+  </a>
+  <a class="tab" href="#/stats" data-view="stats">
+    <svg class="ico tab__ico" aria-hidden="true"><use href="#i-chart"></use></svg>
+    <span class="tab__label">記録</span>
+  </a>
+  <a class="tab" href="#/settings" data-view="settings">
+    <svg class="ico tab__ico" aria-hidden="true"><use href="#i-gear"></use></svg>
+    <span class="tab__label">設定</span>
+  </a>
+</nav>
 
 <div class="lightbox" id="lightbox" hidden>
   <button class="lightbox__close" type="button" aria-label="閉じる">×</button>
@@ -148,6 +199,21 @@
   </div>
 </div>
 
+<!-- 注文シートを選ぶシート -->
+<div class="sheet" id="picksheet" hidden>
+  <div class="sheet__scrim" data-act="close"></div>
+  <div class="sheet__panel" role="dialog" aria-modal="true">
+    <div class="sheet__head">
+      <div>
+        <h3 class="sheet__title">注文シートから貼り付け</h3>
+        <p class="sheet__hint">選んだ内容がフォームに入ります</p>
+      </div>
+      <button class="btn btn--ghost" type="button" data-act="close">閉じる</button>
+    </div>
+    <div class="picklist" data-f="list"></div>
+  </div>
+</div>
+
 <!-- Googleマップのリンクを取り込むシート -->
 <div class="sheet" id="mapsheet" hidden>
   <div class="sheet__scrim" data-act="close"></div>
@@ -183,6 +249,108 @@
 
 <!-- ============ テンプレート ============ -->
 
+<!-- 髪型の注文（カルテと注文シートで共有） -->
+<template id="tpl-order-fields">
+      <fieldset class="fs">
+        <legend class="fs__legend">髪型の注文</legend>
+        <div id="form-headmap"></div>
+        <p class="hm__hint">図の部位をタップして、ミリ数や長さを選べます。</p>
+
+        <div class="grid field--mt">
+          <label class="field">
+            <span class="field__label">ヘアスタイル名称</span>
+            <select class="input" name="styleSelect">
+              <option value="">選択しない</option>
+              <optgroup label="これまでに使ったスタイル" id="og-used"></optgroup>
+              <optgroup label="ベリーショート系">
+                <option>ベリーショート</option>
+                <option>ソフトモヒカン</option>
+                <option>フェード（スキンフェード）</option>
+                <option>刈り上げショート</option>
+                <option>ベリーショート × ツーブロック</option>
+              </optgroup>
+              <optgroup label="ショート系">
+                <option>ショート</option>
+                <option>マッシュショート</option>
+                <option>ツーブロック</option>
+                <option>ツーブロック × マッシュショート</option>
+                <option>センターパート</option>
+                <option>アップバング</option>
+                <option>ショートボブ</option>
+              </optgroup>
+              <optgroup label="ミディアム系">
+                <option>ミディアム</option>
+                <option>レイヤーミディアム</option>
+                <option>ボブ</option>
+                <option>ウルフカット</option>
+                <option>パーマスタイル</option>
+              </optgroup>
+              <optgroup label="ロング系">
+                <option>セミロング</option>
+                <option>ロング</option>
+                <option>ロングレイヤー</option>
+              </optgroup>
+              <option value="__other">その他（自由に入力）</option>
+            </select>
+            <input class="input field--mt" type="text" name="styleName" hidden
+                   placeholder="スタイル名を入力">
+          </label>
+          <label class="field">
+            <span class="field__label">仕上がりの長さ感</span>
+            <select class="input" name="lengthGenre">
+              <option value="">選択しない</option>
+              <option>ベリーショート</option>
+              <option>ショート</option>
+              <option>ミディアム</option>
+              <option>セミロング</option>
+              <option>ロング</option>
+            </select>
+          </label>
+        </div>
+
+        <input type="hidden" name="sideMm">
+        <input type="hidden" name="backMm">
+        <input type="hidden" name="sideburnMm">
+        <input type="hidden" name="topLen">
+        <input type="hidden" name="frontLen">
+        <input type="hidden" name="fadeHeight">
+
+        <details class="foldout">
+          <summary class="foldout__head">パーマ・カラー・すき具合を記録する</summary>
+        <div class="grid">
+          <label class="field">
+            <span class="field__label">すき具合（量感調整）</span>
+            <select class="input" name="thinning">
+              <option value="">選択しない</option>
+              <option>すかない</option>
+              <option>少なめにすく</option>
+              <option>ふつう</option>
+              <option>しっかりすく</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="field__label">パーマ</span>
+            <input class="input" type="text" name="perm" placeholder="例）ツイストスパイラル">
+          </label>
+          <label class="field">
+            <span class="field__label">カラー</span>
+            <input class="input" type="text" name="color" placeholder="例）8トーン アッシュベージュ">
+          </label>
+          <label class="field">
+            <span class="field__label">セット・スタイリング剤</span>
+            <input class="input" type="text" name="styling" placeholder="例）マット系ワックス">
+          </label>
+          <label class="field field--wide">
+            <span class="field__label">伝えたこと・注文メモ</span>
+            <textarea class="input" name="orderNote" rows="3" placeholder="そのまま言えるように書いておくと便利です"></textarea>
+          </label>
+        </div>
+        </details>
+      </fieldset>
+</template>
+
+
+
 <template id="tpl-list">
   <section class="view">
     <div class="summary" id="summary"></div>
@@ -207,6 +375,87 @@
       <p class="empty__text">右下の「＋」から、切った日・お店・注文の仕方を記録しましょう。</p>
       <button class="btn btn--primary" data-action="new">最初のカルテを作る</button>
     </div>
+  </section>
+</template>
+
+<template id="tpl-sheets">
+  <section class="view">
+    <div class="view-head">
+      <h2 class="view__title">注文シート</h2>
+      <p class="view__lead">美容室でそのまま見せられる、髪型の注文だけをまとめた雛形です。お店や日付は入りません。</p>
+    </div>
+    <div class="cards cards--sheets" id="sheet-cards"></div>
+    <div class="empty" id="sheet-empty" hidden>
+      <p class="empty__icon"><svg class="ico ico--empty" aria-hidden="true"><use href="#i-sheet"></use></svg></p>
+      <p class="empty__title">注文シートがありません</p>
+      <p class="empty__text">よく頼む髪型を1枚作っておくと、カルテにも貼り付けられます。</p>
+      <button class="btn btn--primary" data-action="new-sheet">最初のシートを作る</button>
+    </div>
+  </section>
+</template>
+
+<template id="tpl-sheet-form">
+  <section class="view">
+    <form class="form" id="sheet-form" novalidate>
+      <div class="form-head">
+        <button class="btn btn--ghost" type="button" data-action="cancel"><svg class="ico" aria-hidden="true"><use href="#i-back"></use></svg>戻る</button>
+        <h2 class="form-head__title" id="sheet-form-title">新しい注文シート</h2>
+        <button class="btn btn--primary" type="submit">保存</button>
+      </div>
+
+      <fieldset class="fs">
+        <legend class="fs__legend">シートの名前</legend>
+        <label class="field">
+          <span class="field__label">名前 <b class="req">必須</b></span>
+          <input class="input" type="text" name="name" required placeholder="例）いつもの short">
+        </label>
+      </fieldset>
+
+      <div data-slot="order-fields"></div>
+
+      <div class="form-foot">
+        <button class="btn btn--primary btn--block" type="submit">保存する</button>
+      </div>
+    </form>
+  </section>
+</template>
+
+<template id="tpl-sheet-detail">
+  <section class="view">
+    <div class="detail-head">
+      <button class="btn btn--ghost" data-action="back"><svg class="ico" aria-hidden="true"><use href="#i-back"></use></svg>一覧</button>
+      <div class="detail-head__actions">
+        <button class="btn btn--ghost" data-action="delete-sheet"><svg class="ico" aria-hidden="true"><use href="#i-trash"></use></svg>削除</button>
+        <button class="btn" data-action="edit-sheet">編集</button>
+      </div>
+    </div>
+
+    <article class="detail">
+      <h2 class="detail__style" data-f="name"></h2>
+      <p class="detail__meta" data-f="meta"></p>
+
+      <section class="panel panel--order">
+        <div class="panel__head">
+          <h3 class="panel__title">注文の内容</h3>
+          <button class="btn btn--small" data-action="copy-order"><svg class="ico" aria-hidden="true"><use href="#i-copy"></use></svg>コピー</button>
+        </div>
+
+        <div id="sheet-headmap"></div>
+        <dl class="speclist speclist--extra" data-f="specs"></dl>
+        <div class="notebox" data-f="orderNote" hidden></div>
+
+        <details class="foldout">
+          <summary class="foldout__head">美容室で見せる文章</summary>
+          <div class="orderpaper" data-f="orderPaper"></div>
+        </details>
+      </section>
+
+      <section class="panel">
+        <h3 class="panel__title">このシートを使う</h3>
+        <p class="panel__text">切った記録を残すときに、この内容をそのままカルテに写せます。</p>
+        <button class="btn btn--primary" data-action="use-sheet"><svg class="ico" aria-hidden="true"><use href="#i-paste"></use></svg>このシートでカルテを作る</button>
+      </section>
+    </article>
   </section>
 </template>
 
@@ -333,102 +582,12 @@
         </details>
       </fieldset>
 
-      <fieldset class="fs">
-        <legend class="fs__legend">髪型の注文</legend>
-        <div id="form-headmap"></div>
-        <p class="hm__hint">図の部位をタップして、ミリ数や長さを選べます。</p>
-
-        <div class="grid field--mt">
-          <label class="field">
-            <span class="field__label">ヘアスタイル名称</span>
-            <select class="input" name="styleSelect">
-              <option value="">選択しない</option>
-              <optgroup label="これまでに使ったスタイル" id="og-used"></optgroup>
-              <optgroup label="ベリーショート系">
-                <option>ベリーショート</option>
-                <option>ソフトモヒカン</option>
-                <option>フェード（スキンフェード）</option>
-                <option>刈り上げショート</option>
-                <option>ベリーショート × ツーブロック</option>
-              </optgroup>
-              <optgroup label="ショート系">
-                <option>ショート</option>
-                <option>マッシュショート</option>
-                <option>ツーブロック</option>
-                <option>ツーブロック × マッシュショート</option>
-                <option>センターパート</option>
-                <option>アップバング</option>
-                <option>ショートボブ</option>
-              </optgroup>
-              <optgroup label="ミディアム系">
-                <option>ミディアム</option>
-                <option>レイヤーミディアム</option>
-                <option>ボブ</option>
-                <option>ウルフカット</option>
-                <option>パーマスタイル</option>
-              </optgroup>
-              <optgroup label="ロング系">
-                <option>セミロング</option>
-                <option>ロング</option>
-                <option>ロングレイヤー</option>
-              </optgroup>
-              <option value="__other">その他（自由に入力）</option>
-            </select>
-            <input class="input field--mt" type="text" name="styleName" hidden
-                   placeholder="スタイル名を入力">
-          </label>
-          <label class="field">
-            <span class="field__label">仕上がりの長さ感</span>
-            <select class="input" name="lengthGenre">
-              <option value="">選択しない</option>
-              <option>ベリーショート</option>
-              <option>ショート</option>
-              <option>ミディアム</option>
-              <option>セミロング</option>
-              <option>ロング</option>
-            </select>
-          </label>
-        </div>
-
-        <input type="hidden" name="sideMm">
-        <input type="hidden" name="backMm">
-        <input type="hidden" name="sideburnMm">
-        <input type="hidden" name="topLen">
-        <input type="hidden" name="frontLen">
-        <input type="hidden" name="fadeHeight">
-
-        <details class="foldout">
-          <summary class="foldout__head">パーマ・カラー・すき具合を記録する</summary>
-        <div class="grid">
-          <label class="field">
-            <span class="field__label">すき具合（量感調整）</span>
-            <select class="input" name="thinning">
-              <option value="">選択しない</option>
-              <option>すかない</option>
-              <option>少なめにすく</option>
-              <option>ふつう</option>
-              <option>しっかりすく</option>
-            </select>
-          </label>
-          <label class="field">
-            <span class="field__label">パーマ</span>
-            <input class="input" type="text" name="perm" placeholder="例）ツイストスパイラル">
-          </label>
-          <label class="field">
-            <span class="field__label">カラー</span>
-            <input class="input" type="text" name="color" placeholder="例）8トーン アッシュベージュ">
-          </label>
-          <label class="field">
-            <span class="field__label">セット・スタイリング剤</span>
-            <input class="input" type="text" name="styling" placeholder="例）マット系ワックス">
-          </label>
-          <label class="field field--wide">
-            <span class="field__label">伝えたこと・注文メモ</span>
-            <textarea class="input" name="orderNote" rows="3" placeholder="そのまま言えるように書いておくと便利です"></textarea>
-          </label>
-        </div>
-        </details>
-      </fieldset>
+      <div class="pasterow">
+        <button class="btn btn--small" type="button" data-action="paste-sheet">
+          <svg class="ico" aria-hidden="true"><use href="#i-paste"></use></svg>注文シートから貼り付け
+        </button>
+      </div>
+      <div data-slot="order-fields"></div>
 
       <fieldset class="fs">
         <legend class="fs__legend">写真</legend>
