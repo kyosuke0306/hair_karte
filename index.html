@@ -66,6 +66,16 @@
     <path d="M15 4.5L7.5 12l7.5 7.5"/>
   </symbol>
 
+  <symbol id="i-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">
+    <path d="M12 21.5s7-6.2 7-11.5a7 7 0 10-14 0c0 5.3 7 11.5 7 11.5z"/>
+    <circle cx="12" cy="10" r="2.6"/>
+  </symbol>
+
+  <symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+    <path d="M10 13.5a4 4 0 006 .5l2.5-2.5a4 4 0 10-5.7-5.7L11.5 7"/>
+    <path d="M14 10.5a4 4 0 00-6-.5L5.5 12.5a4 4 0 105.7 5.7L12.5 17"/>
+  </symbol>
+
   <symbol id="i-photo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
     <rect x="3" y="5" width="18" height="14" rx="2.5"/>
     <circle cx="8.5" cy="10" r="1.6"/>
@@ -138,6 +148,39 @@
   </div>
 </div>
 
+<!-- Googleマップのリンクを取り込むシート -->
+<div class="sheet" id="mapsheet" hidden>
+  <div class="sheet__scrim" data-act="close"></div>
+  <div class="sheet__panel" role="dialog" aria-modal="true">
+    <div class="sheet__head">
+      <div>
+        <h3 class="sheet__title">Googleマップから取り込む</h3>
+        <p class="sheet__hint">お店の場所とリンクを記録します</p>
+      </div>
+      <button class="btn btn--ghost" type="button" data-act="close">閉じる</button>
+    </div>
+
+    <ol class="steps">
+      <li>Googleマップでお店を開く</li>
+      <li>「共有」→「リンクをコピー」</li>
+      <li>下の欄に貼り付ける</li>
+    </ol>
+
+    <label class="field">
+      <span class="field__label">コピーした内容</span>
+      <textarea class="input" data-f="paste" rows="3"
+                placeholder="https://maps.app.goo.gl/… を貼り付け"></textarea>
+    </label>
+
+    <div class="mapresult" data-f="result" hidden></div>
+
+    <div class="sheet__foot">
+      <button class="btn" type="button" data-act="close">キャンセル</button>
+      <button class="btn btn--primary" type="button" data-act="apply">取り込む</button>
+    </div>
+  </div>
+</div>
+
 <!-- ============ テンプレート ============ -->
 
 <template id="tpl-list">
@@ -183,6 +226,7 @@
         <div class="detail__stars" data-f="rating"></div>
       </div>
       <p class="detail__meta" data-f="meta"></p>
+      <p class="detail__map" data-f="maplink" hidden></p>
 
       <section class="panel panel--order">
         <div class="panel__head">
@@ -251,6 +295,26 @@
           <input class="input" type="text" name="salon" list="dl-salon" placeholder="例）HAIR SALON ○○">
           <datalist id="dl-salon"></datalist>
         </label>
+
+        <input type="hidden" name="mapUrl">
+        <input type="hidden" name="lat">
+        <input type="hidden" name="lng">
+
+        <div class="maprow">
+          <button class="btn btn--small" type="button" data-action="map-search">
+            <svg class="ico" aria-hidden="true"><use href="#i-pin"></use></svg>Googleマップで探す
+          </button>
+          <button class="btn btn--small" type="button" data-action="map-paste">
+            <svg class="ico" aria-hidden="true"><use href="#i-link"></use></svg>マップのリンクを貼り付け
+          </button>
+        </div>
+        <div class="maplinked" data-f="maplinked" hidden>
+          <span class="maplinked__text">
+            <svg class="ico" aria-hidden="true"><use href="#i-pin"></use></svg>
+            <span data-f="maplabel"></span>
+          </span>
+          <button class="btn btn--small" type="button" data-action="map-clear">解除</button>
+        </div>
 
         <details class="foldout">
           <summary class="foldout__head">店舗・担当スタイリストも記録する</summary>
@@ -496,6 +560,7 @@
 <script src="js/photos.js"></script>
 <script src="js/mask.js"></script>
 <script src="js/head.js"></script>
+<script src="js/maps.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

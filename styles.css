@@ -644,6 +644,65 @@ select.input {
 .foldout > .orderpaper { margin-top: 10px; }
 .speclist--extra:empty { display: none; }
 
+/* ============ Googleマップ連携 ============ */
+.maprow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+
+.maplinked {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: var(--accent-soft);
+  border-radius: 10px;
+}
+
+.maplinked[hidden] { display: none; }
+
+.maplinked__text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-strong);
+  min-width: 0;
+}
+
+.detail__map { margin-top: 8px; }
+.detail__map[hidden] { display: none; }
+.detail__map .btn { text-decoration: none; }
+
+.steps {
+  margin: 14px 0 4px;
+  padding-left: 1.3em;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.8;
+}
+
+.mapresult {
+  background: var(--surface-2);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 12px 0 4px;
+}
+
+.mapresult[hidden] { display: none; }
+
+.mapresult__title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.mapresult__row { display: flex; gap: 10px; font-size: 13px; padding: 2px 0; }
+.mapresult__row dt { flex: 0 0 48px; color: var(--text-muted); }
+.mapresult__row dd { flex: 1; overflow-wrap: anywhere; }
+.mapresult__note { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+
 /* ============ 部位図（アバター） ============ */
 .headmap { display: grid; gap: 6px; }
 

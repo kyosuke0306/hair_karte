@@ -235,6 +235,7 @@
     if (sheet) return sheet;
     sheet = document.createElement('div');
     sheet.className = 'sheet';
+    sheet.id = 'pickersheet';   // 他のシートと区別できるようにしておく
     sheet.hidden = true;
     sheet.innerHTML =
       '<div class="sheet__scrim" data-act="close"></div>' +

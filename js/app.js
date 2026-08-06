@@ -170,6 +170,7 @@
 
   function route() {
     closeLightbox();
+    closeMapSheet();
     if (window.HeadMap) HeadMap.close();
     releaseURLs();
     var hash = location.hash || '#/list';
@@ -352,6 +353,15 @@
     if (r.price) meta.push(yen(r.price));
     root.querySelector('[data-f="meta"]').textContent = meta.join(' ・ ');
 
+    var mapBox = root.querySelector('[data-f="maplink"]');
+    var mapHref = Maps.linkFor(r);
+    if (mapHref) {
+      mapBox.hidden = false;
+      mapBox.innerHTML = '<a class="btn btn--small" target="_blank" rel="noopener noreferrer" href="' +
+        esc(mapHref) + '">' + icon('pin') +
+        (r.mapUrl ? 'Googleマップで開く' : 'Googleマップで検索') + '</a>';
+    }
+
     var sheet = orderSheet(r);
     root.querySelector('[data-f="orderPaper"]').textContent = sheet || '注文の記録はまだありません。';
 
@@ -519,6 +529,7 @@
     setupStars(form, Number(form.elements.rating.value) || 0);
     setupHeadMap(form);
     setupStyleSelect(form);
+    setupMapLink(form);
     ['ref', 'self'].forEach(function (kind) { drawEditThumbs(kind); });
 
     form.querySelectorAll('[data-upload]').forEach(function (input) {
@@ -626,6 +637,9 @@
         date: form.elements.date.value,
         salon: form.elements.salon.value.trim(),
         area: form.elements.area.value.trim(),
+        mapUrl: form.elements.mapUrl.value.trim(),
+        lat: form.elements.lat.value ? Number(form.elements.lat.value) : null,
+        lng: form.elements.lng.value ? Number(form.elements.lng.value) : null,
         stylist: form.elements.stylist.value.trim(),
         price: form.elements.price.value ? Number(form.elements.price.value) : null,
         styleName: form.elements.styleName.value.trim(),
@@ -670,6 +684,123 @@
           toast('保存できませんでした：' + (err && err.name === 'QuotaExceededError' ? '端末の空き容量が足りません' : 'エラーが発生しました'));
         });
     });
+  }
+
+  /** お店とGoogleマップの紐付け */
+  function setupMapLink(form) {
+    var salon = form.elements.salon;
+    var urlEl = form.elements.mapUrl;
+    var latEl = form.elements.lat;
+    var lngEl = form.elements.lng;
+    var linked = form.querySelector('[data-f="maplinked"]');
+    var label = form.querySelector('[data-f="maplabel"]');
+
+    function paint() {
+      var has = !!urlEl.value;
+      linked.hidden = !has;
+      if (has) {
+        label.textContent = (latEl.value && lngEl.value)
+          ? 'マップと紐付け済み（場所も記録）'
+          : 'マップと紐付け済み';
+      }
+    }
+
+    form.querySelector('[data-action="map-search"]').addEventListener('click', function () {
+      window.open(Maps.searchLink(salon.value + ' ' + form.elements.area.value), '_blank', 'noopener');
+    });
+
+    form.querySelector('[data-action="map-paste"]').addEventListener('click', function () {
+      openMapSheet(function (info) {
+        urlEl.value = info.url || '';
+        latEl.value = info.lat == null ? '' : info.lat;
+        lngEl.value = info.lng == null ? '' : info.lng;
+        // 店名が空のときだけ、読み取った名前で埋める
+        if (info.name && !salon.value.trim()) salon.value = info.name;
+        paint();
+        toast('マップの情報を取り込みました');
+      });
+    });
+
+    form.querySelector('[data-action="map-clear"]').addEventListener('click', function () {
+      urlEl.value = '';
+      latEl.value = '';
+      lngEl.value = '';
+      paint();
+    });
+
+    // 過去に紐付けたお店を選んだら、その情報を引き継ぐ
+    salon.addEventListener('change', function () {
+      if (urlEl.value) return;
+      var name = salon.value.trim();
+      if (!name) return;
+      var past = state.records.filter(function (r) {
+        return r.salon === name && (r.mapUrl || r.lat != null);
+      })[0];
+      if (!past) return;
+      urlEl.value = past.mapUrl || '';
+      latEl.value = past.lat == null ? '' : past.lat;
+      lngEl.value = past.lng == null ? '' : past.lng;
+      paint();
+      if (urlEl.value) toast('前回のマップ情報を引き継ぎました');
+    });
+
+    paint();
+  }
+
+  /* マップのリンクを貼り付けるシート */
+  var mapSheet = null;
+  var mapDone = null;
+  var mapInfo = null;
+
+  function openMapSheet(done) {
+    if (!mapSheet) {
+      mapSheet = document.getElementById('mapsheet');
+      mapSheet.addEventListener('click', function (e) {
+        var act = e.target.closest('[data-act]');
+        if (!act) return;
+        if (act.dataset.act === 'close') closeMapSheet();
+        if (act.dataset.act === 'apply') {
+          if (!mapInfo) { toast('リンクを貼り付けてください'); return; }
+          var cb = mapDone;
+          var info = mapInfo;
+          closeMapSheet();
+          if (cb) cb(info);
+        }
+      });
+      mapSheet.querySelector('[data-f="paste"]').addEventListener('input', function () {
+        mapInfo = Maps.parseShare(this.value);
+        drawMapResult();
+      });
+    }
+
+    mapDone = done;
+    mapInfo = null;
+    mapSheet.querySelector('[data-f="paste"]').value = '';
+    drawMapResult();
+    mapSheet.hidden = false;
+  }
+
+  function drawMapResult() {
+    var box = mapSheet.querySelector('[data-f="result"]');
+    if (!mapInfo || (!mapInfo.name && !mapInfo.url)) {
+      box.hidden = true;
+      return;
+    }
+    var rows = [];
+    if (mapInfo.name) rows.push(['お店', mapInfo.name]);
+    if (mapInfo.lat != null) rows.push(['場所', mapInfo.lat.toFixed(5) + ', ' + mapInfo.lng.toFixed(5)]);
+    if (mapInfo.url) rows.push(['リンク', mapInfo.url.length > 42 ? mapInfo.url.slice(0, 42) + '…' : mapInfo.url]);
+    box.hidden = false;
+    box.innerHTML = '<p class="mapresult__title">読み取った内容</p>' + rows.map(function (r) {
+      return '<div class="mapresult__row"><dt>' + esc(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd></div>';
+    }).join('') +
+      (mapInfo.name ? '' : '<p class="mapresult__note">店名は読み取れませんでした。リンクだけ記録します。</p>');
+  }
+
+  function closeMapSheet() {
+    if (mapSheet) mapSheet.hidden = true;
+    mapDone = null;
+    mapInfo = null;
   }
 
   /** ヘアスタイルは選択式。一覧に無いものは「その他」で自由に入力できる */
