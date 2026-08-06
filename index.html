@@ -33,6 +33,48 @@
 
 <div class="toast" id="toast" hidden></div>
 
+<!-- 顔隠しエディタ -->
+<div class="editor" id="editor" hidden>
+  <div class="editor__bar">
+    <button class="btn btn--ghost" type="button" data-act="cancel">キャンセル</button>
+    <span class="editor__title">顔を隠す</span>
+    <button class="btn btn--primary" type="button" data-act="apply">適用</button>
+  </div>
+
+  <div class="editor__stage">
+    <canvas id="editor-canvas"></canvas>
+  </div>
+
+  <div class="editor__tools">
+    <button class="btn btn--auto" type="button" data-act="auto">🙈 自動で顔を検出して隠す</button>
+
+    <div class="editor__row">
+      <span class="editor__label">隠し方</span>
+      <div class="segmented">
+        <button class="seg is-on" type="button" data-style="mosaic">モザイク</button>
+        <button class="seg" type="button" data-style="blur">ぼかし</button>
+        <button class="seg" type="button" data-style="fill">ぬりつぶし</button>
+      </div>
+    </div>
+
+    <div class="editor__row">
+      <span class="editor__label">形</span>
+      <div class="segmented">
+        <button class="seg is-on" type="button" data-shape="ellipse">丸</button>
+        <button class="seg" type="button" data-shape="rect">四角</button>
+      </div>
+      <span class="editor__count" data-f="count"></span>
+    </div>
+
+    <div class="editor__row editor__row--end">
+      <button class="btn btn--small" type="button" data-act="undo">↩ ひとつ戻す</button>
+      <button class="btn btn--small" type="button" data-act="clear">すべて消す</button>
+    </div>
+
+    <p class="editor__hint" data-f="hint"></p>
+  </div>
+</div>
+
 <!-- ============ テンプレート ============ -->
 
 <template id="tpl-list">
@@ -266,6 +308,7 @@
             </label>
           </div>
         </div>
+        <p class="hint">写真の「🙈 顔を隠す」から、顔をモザイク・ぼかし・ぬりつぶしで隠せます。自動検出に加えて、指でなぞって好きな場所も隠せます。</p>
       </fieldset>
 
       <fieldset class="fs">
@@ -370,6 +413,7 @@
 
 <script src="js/db.js"></script>
 <script src="js/photos.js"></script>
+<script src="js/mask.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

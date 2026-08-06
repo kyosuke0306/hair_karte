@@ -459,7 +459,7 @@
       draftPhotos = photosOf(copyFromId, 'ref').map(function (p) {
         return {
           id: uid(), recordId: null, kind: 'ref', full: p.full, thumb: p.thumb,
-          width: p.width, height: p.height, createdAt: Date.now()
+          width: p.width, height: p.height, masked: !!p.masked, createdAt: Date.now()
         };
       });
     }
@@ -525,12 +525,30 @@
         var item = document.createElement('div');
         item.className = 'thumb thumb--editable';
         item.innerHTML = '<img src="' + objectURL(p.thumb || p.full) + '" alt="">' +
-          '<button type="button" class="thumb__del" title="削除">×</button>';
+          '<button type="button" class="thumb__del" title="削除">×</button>' +
+          '<button type="button" class="thumb__mask">🙈 顔を隠す</button>';
+
         item.querySelector('.thumb__del').addEventListener('click', function () {
           draftPhotos = draftPhotos.filter(function (x) { return x.id !== p.id; });
           removed.push(p.id);
           drawEditThumbs(kind);
         });
+
+        item.querySelector('.thumb__mask').addEventListener('click', function () {
+          MaskEditor.open(p, function (out) {
+            p.full = out.full;
+            p.thumb = out.thumb;
+            p.width = out.width;
+            p.height = out.height;
+            p.masked = true;
+            drawEditThumbs(kind);
+            toast('顔を隠しました（保存すると確定します）');
+          }).catch(function (err) {
+            console.error(err);
+            toast('画像を開けませんでした');
+          });
+        });
+
         slot.appendChild(item);
       });
     }
@@ -579,7 +597,7 @@
       var photos = draftPhotos.map(function (p) {
         return {
           id: p.id, recordId: id, kind: p.kind, full: p.full, thumb: p.thumb,
-          width: p.width, height: p.height, createdAt: p.createdAt
+          width: p.width, height: p.height, masked: !!p.masked, createdAt: p.createdAt
         };
       });
 
@@ -821,7 +839,7 @@
       ]).then(function (d) {
         return {
           id: p.id, recordId: p.recordId, kind: p.kind,
-          width: p.width, height: p.height, createdAt: p.createdAt,
+          width: p.width, height: p.height, masked: !!p.masked, createdAt: p.createdAt,
           full: d[0], thumb: d[1]
         };
       });
@@ -865,7 +883,7 @@
       var photos = (data.photos || []).map(function (p) {
         return {
           id: p.id, recordId: p.recordId, kind: p.kind,
-          width: p.width, height: p.height, createdAt: p.createdAt,
+          width: p.width, height: p.height, masked: !!p.masked, createdAt: p.createdAt,
           full: p.full ? Photos.dataURLtoBlob(p.full) : null,
           thumb: p.thumb ? Photos.dataURLtoBlob(p.thumb) : null
         };

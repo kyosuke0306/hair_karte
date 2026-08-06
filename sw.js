@@ -1,11 +1,12 @@
 /* オフラインでも開けるように、アプリの外枠をキャッシュする */
-var CACHE = 'hair-karte-v1';
+var CACHE = 'hair-karte-v2';
 var ASSETS = [
   './',
   './index.html',
   './styles.css',
   './js/db.js',
   './js/photos.js',
+  './js/mask.js',
   './js/app.js',
   './manifest.json',
   './icon.svg'

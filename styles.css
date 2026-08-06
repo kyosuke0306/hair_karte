@@ -508,6 +508,121 @@ select.input {
 .ranking__stars { color: var(--star); white-space: nowrap; letter-spacing: 1px; }
 .ranking__value { color: var(--text-muted); font-size: 12px; white-space: nowrap; min-width: 34px; text-align: right; }
 
+/* ============ 顔隠しエディタ ============ */
+.editor {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.editor[hidden] { display: none; }
+
+.editor__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.editor__title { font-size: 14px; font-weight: 700; }
+
+.editor__stage {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  padding: 10px;
+  background: #14100d;
+  overflow: hidden;
+}
+
+#editor-canvas {
+  display: block;
+  touch-action: none;      /* 指でなぞる操作をスクロールに取られない */
+  cursor: crosshair;
+  border-radius: 6px;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.editor__tools {
+  padding: 12px 14px 16px;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+
+.btn--auto {
+  width: 100%;
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: var(--accent-strong);
+  padding: 12px;
+  font-size: 14px;
+}
+
+.editor__row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.editor__row--end { justify-content: flex-end; }
+.editor__label { font-size: 12px; color: var(--text-muted); flex: 0 0 44px; }
+.editor__count { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.seg {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-right: 1px solid var(--line);
+}
+
+.seg:last-child { border-right: none; }
+.seg.is-on { background: var(--accent); color: var(--on-accent); }
+
+.editor__hint { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+
+.hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin-top: 12px;
+}
+
+.thumb__mask {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: none;
+  background: rgba(0, 0, 0, .62);
+  color: #fff;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 2px;
+  cursor: pointer;
+}
+
 /* ============ ライトボックス・トースト ============ */
 .lightbox {
   position: fixed;
