@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deploy1.outputs.page_url || steps.deploy2.outputs.page_url || steps.deploy3.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -34,10 +34,22 @@ jobs:
         with:
           path: .
 
-      # deploy-pages は待ち時間の上限が10分でハードコードされており
-      # （MAX_TIMEOUT = 600000、入力値は Math.min で切り捨てられる）、延長できない。
-      # 同じアカウントの他リポジトリが Pages をデプロイ中だと順番待ちが長引き、
-      # この10分を超えて中断されることがある。その場合は再実行する。
-      - name: Deploy
-        id: deployment
+      # deploy-pages は待ち時間の上限が10分でハードコードされていて延長できない
+      # （MAX_TIMEOUT = 600000、timeout 入力は Math.min で切り捨てられる）。
+      # 上限に達するとデプロイ自体をキャンセルして失敗する。
+      # Pages 側が混んでいると10分を超えることがあるため、最大3回まで試す。
+      - name: Deploy (1回目)
+        id: deploy1
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+
+      - name: Deploy (2回目)
+        id: deploy2
+        if: steps.deploy1.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+
+      - name: Deploy (3回目)
+        id: deploy3
+        if: steps.deploy1.outcome == 'failure' && steps.deploy2.outcome == 'failure'
         uses: actions/deploy-pages@v4
