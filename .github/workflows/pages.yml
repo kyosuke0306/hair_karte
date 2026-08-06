@@ -37,3 +37,6 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          # Pages 側のキュー待ちが既定の10分を超えて中断されることがあるため延ばす
+          timeout: 1800000
