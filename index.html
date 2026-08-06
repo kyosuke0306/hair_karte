@@ -120,6 +120,15 @@
     <path d="M14 10.5a4 4 0 00-6-.5L5.5 12.5a4 4 0 105.7 5.7L12.5 17"/>
   </symbol>
 
+  <symbol id="i-talk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 13.5a3 3 0 01-3 3H9.5L5 20.2V16.5H4.8a3 3 0 01-2.8-3v-7a3 3 0 013-3h11a3 3 0 013 3z"/>
+    <path d="M7.5 8.5h7M7.5 12h4.5"/>
+  </symbol>
+
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4.5 12.5l5 5 10-11"/>
+  </symbol>
+
   <symbol id="i-photo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
     <rect x="3" y="5" width="18" height="14" rx="2.5"/>
     <circle cx="8.5" cy="10" r="1.6"/>
@@ -237,7 +246,7 @@
 
     <ol class="steps">
       <li>Googleマップでお店を開く</li>
-      <li>「共有」→「リンクをコピー」</li>
+      <li>「共有」から「リンクをコピー」</li>
       <li>下の欄に貼り付ける</li>
     </ol>
 
@@ -413,14 +422,51 @@
   </section>
 </template>
 
+<template id="tpl-showbar">
+  <div class="show__bar">
+    <div class="switch" role="group" aria-label="表示の切り替え">
+      <a class="switch__btn" data-go="say"><svg class="ico" aria-hidden="true"><use href="#i-talk"></use></svg>伝える</a>
+      <a class="switch__btn" data-go="show"><svg class="ico" aria-hidden="true"><use href="#i-show"></use></svg>見せる</a>
+    </div>
+    <button class="btn btn--ghost btn--small" data-action="close-show" aria-label="閉じる">
+      <svg class="ico" aria-hidden="true"><use href="#i-close"></use></svg>閉じる
+    </button>
+  </div>
+</template>
+
+<template id="tpl-say">
+  <section class="show show--say">
+    <div data-slot="showbar"></div>
+
+    <div class="show__body">
+      <header class="show__head">
+        <h1 class="show__title" data-f="title"></h1>
+        <p class="show__sub" data-f="sub"></p>
+      </header>
+
+      <p class="say__lead">上から順に読めば、そのまま注文になります。伝えた項目はタップでチェックできます。</p>
+
+      <ol class="saylist" data-f="lines"></ol>
+
+      <section class="say__photos" data-f="photos" hidden>
+        <h2 class="show__label">最後に写真を見せる</h2>
+        <div class="thumbs thumbs--show" data-f="photolist"></div>
+      </section>
+
+      <div class="say__foot">
+        <p class="say__progress" data-f="progress"></p>
+        <div class="say__foot-btns">
+          <button class="btn btn--small" data-action="reset-say"><svg class="ico" aria-hidden="true"><use href="#i-undo"></use></svg>チェックを消す</button>
+          <button class="btn btn--small" data-action="copy-order"><svg class="ico" aria-hidden="true"><use href="#i-copy"></use></svg>文章をコピー</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</template>
+
 <template id="tpl-show">
   <section class="show">
-    <div class="show__bar">
-      <p class="show__hint">美容師さんに見せる画面です</p>
-      <button class="btn btn--ghost" data-action="close-show">
-        <svg class="ico" aria-hidden="true"><use href="#i-close"></use></svg>閉じる
-      </button>
-    </div>
+    <div data-slot="showbar"></div>
 
     <div class="show__body">
       <header class="show__head">
@@ -503,10 +549,15 @@
       <p class="detail__meta" data-f="meta"></p>
 
       <div class="showcta">
-        <button class="btn btn--primary btn--block btn--show" data-action="show">
-          <svg class="ico" aria-hidden="true"><use href="#i-show"></use></svg>美容師さんに見せる
-        </button>
-        <p class="showcta__note">大きな文字と図で表示します。そのまま画面を渡せます。</p>
+        <div class="showcta__pair">
+          <button class="btn btn--primary btn--show" data-action="say">
+            <svg class="ico" aria-hidden="true"><use href="#i-talk"></use></svg>伝える文章
+          </button>
+          <button class="btn btn--primary btn--show" data-action="show">
+            <svg class="ico" aria-hidden="true"><use href="#i-show"></use></svg>見せる
+          </button>
+        </div>
+        <p class="showcta__note">「伝える文章」は読み上げ用、「見せる」は画面を渡す用です。どちらもその場で切り替えられます。</p>
       </div>
 
       <section class="panel panel--order">
@@ -518,11 +569,6 @@
         <div id="sheet-headmap"></div>
         <dl class="speclist speclist--extra" data-f="specs"></dl>
         <div class="notebox" data-f="orderNote" hidden></div>
-
-        <details class="foldout">
-          <summary class="foldout__head">美容室で見せる文章</summary>
-          <div class="orderpaper" data-f="orderPaper"></div>
-        </details>
       </section>
 
       <section class="panel">
@@ -567,19 +613,24 @@
       <section class="panel panel--order">
         <div class="panel__head">
           <h3 class="panel__title">注文の仕方</h3>
-          <button class="btn btn--small" data-action="show"><svg class="ico" aria-hidden="true"><use href="#i-show"></use></svg>見せる</button>
-          <button class="btn btn--small" data-action="copy-order"><svg class="ico" aria-hidden="true"><use href="#i-copy"></use></svg>注文シートをコピー</button>
+          <button class="btn btn--small" data-action="copy-order"><svg class="ico" aria-hidden="true"><use href="#i-copy"></use></svg>コピー</button>
+        </div>
+
+        <div class="showcta showcta--inline">
+          <div class="showcta__pair">
+            <button class="btn btn--primary btn--show" data-action="say">
+              <svg class="ico" aria-hidden="true"><use href="#i-talk"></use></svg>伝える文章
+            </button>
+            <button class="btn btn--primary btn--show" data-action="show">
+              <svg class="ico" aria-hidden="true"><use href="#i-show"></use></svg>見せる
+            </button>
+          </div>
         </div>
 
         <div id="detail-headmap"></div>
 
         <dl class="speclist speclist--extra" data-f="specs"></dl>
         <div class="notebox" data-f="orderNote" hidden></div>
-
-        <details class="foldout">
-          <summary class="foldout__head">美容室で見せる文章</summary>
-          <div class="orderpaper" data-f="orderPaper"></div>
-        </details>
       </section>
 
       <section class="panel">

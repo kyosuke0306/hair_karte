@@ -172,7 +172,32 @@ body.is-showing .main { max-width: 720px; padding: 0; }
   border-bottom: 1px solid var(--line);
 }
 
-.show__hint { font-size: 11px; color: var(--text-muted); }
+/* 「伝える」「見せる」の切り替え */
+.switch {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.switch__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.switch__btn.is-on { background: var(--accent); color: var(--on-accent); }
+.switch__btn .ico { width: 15px; height: 15px; }
 .show__body { padding: 18px 18px calc(28px + env(safe-area-inset-bottom)); }
 .show__head { margin-bottom: 16px; }
 
@@ -236,10 +261,87 @@ body.is-showing .main { max-width: 720px; padding: 0; }
 .thumbs--show .photo { width: 150px; }
 .thumbs--show .photo__cap { font-size: 13px; }
 
+/* ---- 伝える画面（読み上げ用） ---- */
+.say__lead { font-size: 12.5px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.7; }
+.saylist { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+
+.sayitem {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 15px 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: opacity .15s ease, background .15s ease;
+}
+
+.sayitem--note { background: var(--accent-soft); }
+
+.sayitem__check {
+  flex: 0 0 26px;
+  height: 26px;
+  margin-top: 2px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--line);
+  border-radius: 50%;
+  color: transparent;
+}
+
+.sayitem__check .ico { width: 15px; height: 15px; }
+.sayitem__body { flex: 1; min-width: 0; }
+
+.sayitem__label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: .04em;
+  margin-bottom: 3px;
+}
+
+.sayitem__text {
+  display: block;
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.55;
+  overflow-wrap: break-word;
+  line-break: strict;   /* 「ー」の前で折り返さない */
+}
+
+.sayitem.is-done { opacity: .42; border-left-color: var(--line); }
+.sayitem.is-done .sayitem__check {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.sayitem.is-done .sayitem__text { text-decoration: line-through; }
+
+.say__photos { margin-top: 22px; }
+
+.say__foot {
+  margin-top: 22px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.say__progress { font-size: 13px; font-weight: 700; color: var(--text-muted); }
+.say__foot-btns { display: flex; gap: 8px; }
+
 /* 詳細画面での案内 */
 .showcta { margin: 4px 0 14px; }
-.btn--show { padding: 16px; font-size: 16px; }
-.showcta__note { font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 6px; }
+.showcta--inline { margin: 12px 0 4px; }
+.showcta__pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.btn--show { padding: 16px 10px; font-size: 16px; }
+.showcta__note { font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 6px; line-height: 1.6; }
 
 /* ============ 下部タブバー ============ */
 .tabbar {

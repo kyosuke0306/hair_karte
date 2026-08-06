@@ -206,9 +206,10 @@
       view === 'new' || view === 'edit' || view === 'sheet-new' || view === 'sheet-edit';
     fab.title = group === 'list' ? '新しいカルテを追加' : '新しい注文シートを追加';
 
-    // 見せる画面ではヘッダーやタブを隠して、内容だけにする
-    document.body.classList.toggle('is-showing', view === 'show');
-    keepAwake(view === 'show');
+    // 美容室で使う画面（伝える・見せる）ではヘッダーやタブを隠して、内容だけにする
+    var presenting = view === 'show' || view === 'say';
+    document.body.classList.toggle('is-showing', presenting);
+    keepAwake(presenting);
     window.scrollTo(0, 0);
 
     if (view === 'detail' && id) return renderDetail(id);
@@ -219,6 +220,7 @@
     if (view === 'sheet-new') return renderSheetForm(null);
     if (view === 'sheet-edit' && id) return renderSheetForm(id);
     if (view === 'show' && id) return renderShow(id);
+    if (view === 'say' && id) return renderSay(id);
     if (view === 'list') return renderList();
     if (view === 'stats') return renderStats();
     if (view === 'settings') return renderSettings();
@@ -398,7 +400,6 @@
     }
 
     var sheet = orderSheet(r);
-    root.querySelector('[data-f="orderPaper"]').textContent = sheet || '注文の記録はまだありません。';
 
     HeadMap.render(root.querySelector('#detail-headmap'), r, { editable: false });
 
@@ -447,6 +448,10 @@
 
     root.querySelector('[data-action="show"]').addEventListener('click', function () {
       go('#/show/' + r.id);
+    });
+
+    root.querySelector('[data-action="say"]').addEventListener('click', function () {
+      go('#/say/' + r.id);
     });
 
     root.querySelector('[data-action="delete"]').addEventListener('click', function () {
@@ -1023,6 +1028,114 @@
       state.records.filter(function (x) { return x.id === id; })[0] || null;
   }
 
+  /** 「伝える」と「見せる」を行き来する上部バー。閉じると元の画面に戻る */
+  function setupShowBar(root, id, current) {
+    root.querySelectorAll('.switch__btn').forEach(function (b) {
+      var to = b.dataset.go;
+      b.classList.toggle('is-on', to === current);
+      b.href = '#/' + to + '/' + id;
+      b.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (to === current) return;
+        location.replace('#/' + to + '/' + id);   // 行き来しても履歴を汚さない
+      });
+    });
+
+    root.querySelector('[data-action="close-show"]').addEventListener('click', function () {
+      var o = findOrder(id);
+      if (!o) { go('#/sheets'); return; }
+      go((o.name != null ? '#/sheet/' : '#/detail/') + id);
+    });
+  }
+
+  /**
+   * 自分の口で伝えるための文章。1行＝1つのお願いにして、上から読めば注文になる。
+   * 言い回しは「〜でお願いします」に揃えて、どんな値でも自然につながるようにする。
+   */
+  function sayLines(o) {
+    var lines = [];
+    var style = [o.styleName, o.lengthGenre ? '（' + o.lengthGenre + '）' : ''].join('');
+    if (style) lines.push({ label: 'スタイル', text: style + ' にしたいです。' });
+
+    [
+      ['サイド', o.sideMm],
+      ['もみあげ', o.sideburnMm],
+      ['バック', o.backMm],
+      ['刈り上げの高さ', o.fadeHeight],
+      ['トップ', o.topLen],
+      ['前髪', o.frontLen],
+      ['量感', o.thinning],
+      ['パーマ', o.perm],
+      ['カラー', o.color]
+    ].forEach(function (r) {
+      // 「耳の上まで」のように助詞で終わる値は「まで でお願い」にならないようにする
+      var tail = /(まで|で)$/.test(r[1]) ? ' お願いします。' : ' でお願いします。';
+      if (r[1]) lines.push({ label: r[0], text: r[0] + 'は ' + r[1] + tail });
+    });
+
+    if (o.styling) lines.push({ label: 'ふだんのセット', text: 'ふだんは ' + o.styling + ' でセットしています。' });
+    if (o.orderNote) lines.push({ label: '伝えたいこと', text: o.orderNote, note: true });
+    return lines;
+  }
+
+  function renderSay(id) {
+    var o = findOrder(id);
+    if (!o) { go('#/sheets'); return; }
+
+    mount('tpl-say');
+    var root = main;
+
+    root.querySelector('[data-f="title"]').textContent = o.name || o.styleName || '髪型の注文';
+    root.querySelector('[data-f="sub"]').textContent =
+      [o.name ? o.styleName : '', o.lengthGenre].filter(Boolean).join('　・　');
+
+    var lines = sayLines(o);
+    var list = root.querySelector('[data-f="lines"]');
+    var progress = root.querySelector('[data-f="progress"]');
+
+    if (!lines.length) {
+      list.innerHTML = '<li class="muted">伝える内容がまだありません。編集して指定を入れてください。</li>';
+      progress.textContent = '';
+    } else {
+      list.innerHTML = lines.map(function (l) {
+        return '<li class="sayitem' + (l.note ? ' sayitem--note' : '') + '">' +
+          '<span class="sayitem__check">' + icon('check') + '</span>' +
+          '<span class="sayitem__body">' +
+            '<span class="sayitem__label">' + esc(l.label) + '</span>' +
+            '<span class="sayitem__text">' + esc(l.text).replace(/\n/g, '<br>') + '</span>' +
+          '</span></li>';
+      }).join('');
+
+      var count = function () {
+        var done = list.querySelectorAll('.sayitem.is-done').length;
+        progress.textContent = done + ' / ' + lines.length + ' 伝えました';
+      };
+      list.addEventListener('click', function (e) {
+        var item = e.target.closest('.sayitem');
+        if (!item) return;
+        item.classList.toggle('is-done');
+        count();
+      });
+      root.querySelector('[data-action="reset-say"]').addEventListener('click', function () {
+        list.querySelectorAll('.sayitem').forEach(function (i) { i.classList.remove('is-done'); });
+        count();
+      });
+      count();
+    }
+
+    var refs = photosOf(o.id, 'ref');
+    if (refs.length) {
+      root.querySelector('[data-f="photos"]').hidden = false;
+      drawThumbs(root.querySelector('[data-f="photolist"]'), refs, '');
+    }
+
+    root.querySelector('[data-action="copy-order"]').addEventListener('click', function () {
+      copyText(lines.map(function (l) { return l.text; }).join('\n') || '（内容がありません）');
+    });
+
+    setupShowBar(root, id, 'say');
+  }
+
   function renderShow(id) {
     var o = findOrder(id);
     if (!o) { go('#/sheets'); return; }
@@ -1067,9 +1180,7 @@
       drawThumbs(root.querySelector('[data-f="photolist"]'), refs, '');
     }
 
-    root.querySelector('[data-action="close-show"]').addEventListener('click', function () {
-      history.length > 1 ? history.back() : go('#/sheets');
-    });
+    setupShowBar(root, id, 'show');
   }
 
   /* ---------------- 注文シート ---------------- */
@@ -1140,7 +1251,6 @@
     drawThumbs(root.querySelector('[data-f="photos-self"]'), photosOf(sh.id, 'self'), '自分の写真はありません');
 
     var text = orderSheet(sh);
-    root.querySelector('[data-f="orderPaper"]').textContent = text || '内容がまだありません。';
 
     root.querySelector('[data-action="back"]').addEventListener('click', function () { go('#/sheets'); });
     root.querySelector('[data-action="edit-sheet"]').addEventListener('click', function () { go('#/sheet-edit/' + sh.id); });
@@ -1150,6 +1260,10 @@
 
     root.querySelector('[data-action="show"]').addEventListener('click', function () {
       go('#/show/' + sh.id);
+    });
+
+    root.querySelector('[data-action="say"]').addEventListener('click', function () {
+      go('#/say/' + sh.id);
     });
 
     root.querySelector('[data-action="use-sheet"]').addEventListener('click', function () {
