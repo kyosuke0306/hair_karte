@@ -77,9 +77,19 @@
 
   function daysSince(iso) { return daysBetween(iso, todayISO()); }
 
+  /** 星の評価を SVG で組み立てる（環境によって絵文字化しないように文字は使わない） */
   function stars(n) {
     n = Number(n) || 0;
-    return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n);
+    var out = '';
+    for (var i = 1; i <= 5; i++) {
+      out += '<svg class="star-ico' + (i <= n ? ' is-on' : '') + '" aria-hidden="true">' +
+        '<use href="#i-star"></use></svg>';
+    }
+    return '<span class="stars" role="img" aria-label="満足度 ' + n + ' / 5">' + out + '</span>';
+  }
+
+  function icon(name) {
+    return '<svg class="ico" aria-hidden="true"><use href="#i-' + name + '"></use></svg>';
   }
 
   function yen(n) {
@@ -113,29 +123,29 @@
     var head = [];
     if (r.styleName) head.push(r.styleName);
     if (r.lengthGenre) head.push('（' + r.lengthGenre + '）');
-    if (head.length) lines.push('■ スタイル：' + head.join(''));
+    if (head.length) lines.push('【スタイル】' + head.join(''));
 
     var mm = [];
     if (r.sideMm) mm.push('サイド ' + r.sideMm);
     if (r.backMm) mm.push('バック ' + r.backMm);
     if (r.sideburnMm) mm.push('もみあげ ' + r.sideburnMm);
     if (r.fadeHeight) mm.push('刈り上げの高さ ' + r.fadeHeight);
-    if (mm.length) lines.push('■ 刈り上げ：' + mm.join(' / '));
+    if (mm.length) lines.push('【刈り上げ】' + mm.join(' / '));
 
     var len = [];
     if (r.topLen) len.push('トップ ' + r.topLen);
     if (r.frontLen) len.push('前髪 ' + r.frontLen);
-    if (len.length) lines.push('■ 長さ：' + len.join(' / '));
+    if (len.length) lines.push('【長さ】' + len.join(' / '));
 
     var opt = [];
     if (r.thinning) opt.push('量感 ' + r.thinning);
     if (r.perm) opt.push('パーマ ' + r.perm);
     if (r.color) opt.push('カラー ' + r.color);
-    if (opt.length) lines.push('■ その他：' + opt.join(' / '));
+    if (opt.length) lines.push('【その他】' + opt.join(' / '));
 
-    if (r.orderNote) lines.push('■ 伝えること：' + r.orderNote);
-    if (r.next) lines.push('■ 次回はこうしたい：' + r.next);
-    if (r.styling) lines.push('■ ふだんのセット：' + r.styling);
+    if (r.orderNote) lines.push('【伝えること】' + r.orderNote);
+    if (r.next) lines.push('【次回はこうしたい】' + r.next);
+    if (r.styling) lines.push('【ふだんのセット】' + r.styling);
 
     return lines.join('\n');
   }
@@ -276,7 +286,7 @@
 
       var thumbHTML = cover
         ? '<img class="card__img" src="' + objectURL(cover.thumb || cover.full) + '" alt="">'
-        : '<div class="card__img card__img--none">✂</div>';
+        : '<div class="card__img card__img--none">' + icon('photo') + '</div>';
 
       var chips = [];
       if (r.sideMm) chips.push('サイド ' + r.sideMm);
@@ -310,7 +320,7 @@
     var root = main;
 
     root.querySelector('[data-f="styleName"]').textContent = r.styleName || '（スタイル名なし）';
-    root.querySelector('[data-f="rating"]').textContent = stars(r.rating);
+    root.querySelector('[data-f="rating"]').innerHTML = stars(r.rating);
 
     var since = daysSince(r.date);
     var meta = [formatDate(r.date)];
@@ -526,7 +536,7 @@
         item.className = 'thumb thumb--editable';
         item.innerHTML = '<img src="' + objectURL(p.thumb || p.full) + '" alt="">' +
           '<button type="button" class="thumb__del" title="削除">×</button>' +
-          '<button type="button" class="thumb__mask">🙈 顔を隠す</button>';
+          '<button type="button" class="thumb__mask">' + icon('mask') + '顔を隠す</button>';
 
         item.querySelector('.thumb__del').addEventListener('click', function () {
           draftPhotos = draftPhotos.filter(function (x) { return x.id !== p.id; });

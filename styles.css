@@ -62,6 +62,29 @@
 
 * { box-sizing: border-box; }
 
+/* ============ アイコン ============ */
+.sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+.ico {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  vertical-align: -2px;
+}
+
+.ico--logo { width: 21px; height: 21px; color: var(--accent); }
+.ico--empty { width: 46px; height: 46px; color: var(--accent); opacity: .5; }
+
+.stars { display: inline-flex; align-items: center; gap: 1px; line-height: 1; }
+
+.star-ico {
+  width: 13px;
+  height: 13px;
+  color: var(--line);
+}
+
+.star-ico.is-on { color: var(--star); }
+
 html { -webkit-text-size-adjust: 100%; }
 
 body {
@@ -102,12 +125,6 @@ dl, dd, dt { margin: 0; }
   display: flex;
   align-items: center;
   gap: 7px;
-}
-
-.app-title__mark {
-  color: var(--accent);
-  transform: rotate(-15deg);
-  display: inline-block;
 }
 
 .tabs { display: flex; gap: 4px; margin-top: 8px; }
@@ -157,8 +174,20 @@ dl, dd, dt { margin: 0; }
 
 /* ============ 検索バー ============ */
 .filterbar { display: flex; gap: 8px; margin-bottom: 14px; }
-.filterbar .input { flex: 1; }
 .input--sort { flex: 0 0 128px; }
+
+.searchbox { position: relative; flex: 1; min-width: 0; }
+
+.searchbox__ico {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.searchbox .input--search { padding-left: 36px; }
 
 /* ============ カード ============ */
 .cards { display: grid; gap: 12px; }
@@ -194,15 +223,18 @@ dl, dd, dt { margin: 0; }
 .card__img--none {
   display: grid;
   place-items: center;
-  font-size: 26px;
   color: var(--text-muted);
+  opacity: .55;
 }
+
+.card__img--none .ico { width: 30px; height: 30px; }
 
 .card__body { min-width: 0; flex: 1; }
 .card__date { font-size: 11px; color: var(--text-muted); }
 .card__style { font-size: 15px; margin: 1px 0 2px; overflow-wrap: anywhere; }
 .card__salon { font-size: 12px; color: var(--text-muted); overflow-wrap: anywhere; }
-.card__stars { color: var(--star); font-size: 12px; letter-spacing: 1px; margin-top: 2px; }
+.card__stars { margin-top: 3px; }
+.card__stars .star-ico { width: 12px; height: 12px; }
 
 .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
 
@@ -219,7 +251,7 @@ dl, dd, dt { margin: 0; }
 
 /* ============ 空状態 ============ */
 .empty { text-align: center; padding: 48px 16px; }
-.empty__icon { font-size: 44px; }
+.empty__icon { line-height: 0; }
 .empty__title { font-weight: 700; margin: 8px 0 4px; }
 .empty__text { color: var(--text-muted); font-size: 13px; margin-bottom: 18px; }
 
@@ -275,7 +307,7 @@ dl, dd, dt { margin: 0; }
 
 .detail__title { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .detail__style { font-size: 20px; overflow-wrap: anywhere; }
-.detail__stars { color: var(--star); letter-spacing: 2px; }
+.detail__stars .star-ico { width: 17px; height: 17px; }
 .detail__meta { color: var(--text-muted); font-size: 12px; margin-top: 4px; }
 
 .panel {
@@ -437,13 +469,13 @@ select.input {
 .star {
   background: none;
   border: none;
-  font-size: 30px;
-  line-height: 1;
+  line-height: 0;
   color: var(--line);
   cursor: pointer;
-  padding: 0 2px;
+  padding: 2px 3px;
 }
 
+.star .star__ico { width: 28px; height: 28px; }
 .star.is-on { color: var(--star); }
 .stars-input__label { font-size: 12px; color: var(--text-muted); margin-left: 10px; }
 
@@ -505,7 +537,7 @@ select.input {
 
 .ranking__row:last-child { border-bottom: none; }
 .ranking__name { flex: 1; overflow-wrap: anywhere; }
-.ranking__stars { color: var(--star); white-space: nowrap; letter-spacing: 1px; }
+.ranking__stars { white-space: nowrap; }
 .ranking__value { color: var(--text-muted); font-size: 12px; white-space: nowrap; min-width: 34px; text-align: right; }
 
 /* ============ 顔隠しエディタ ============ */
@@ -613,6 +645,10 @@ select.input {
   left: 0;
   right: 0;
   bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   border: none;
   background: rgba(0, 0, 0, .62);
   color: #fff;
@@ -622,6 +658,8 @@ select.input {
   padding: 4px 2px;
   cursor: pointer;
 }
+
+.thumb__mask .ico { width: 12px; height: 12px; vertical-align: 0; }
 
 /* ============ ライトボックス・トースト ============ */
 .lightbox {
