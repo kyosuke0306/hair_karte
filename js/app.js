@@ -102,6 +102,15 @@
     return '<svg class="ico" aria-hidden="true"><use href="#i-' + name + '"></use></svg>';
   }
 
+  /** 覚えておくだけの小さな設定。使えない環境（プライベートモードなど）では黙って諦める */
+  function store(key, value) {
+    try {
+      if (value === undefined) return localStorage.getItem(key);
+      localStorage.setItem(key, value);
+    } catch (e) { /* 保存できなくても動作には影響しない */ }
+    return value;
+  }
+
   /* 写真の向き。よく使うものをボタンで選べるようにする */
   var PHOTO_CAPTIONS = ['正面', '斜め', '横', '後ろ', '全体'];
 
@@ -183,6 +192,7 @@
   function route() {
     closeLightbox();
     closeMapSheet();
+    closeFindSheet();
     closeSheetPicker();
     if (window.HeadMap) HeadMap.close();
     releaseURLs();
@@ -478,6 +488,7 @@
         '</button>' +
         '<figcaption class="photo__cap">' + esc(p.caption || '') + '</figcaption>';
       if (!p.caption) fig.querySelector('.photo__cap').hidden = true;
+      if (p.source) fig.appendChild(sourceLink(p.source));
       fig.querySelector('.thumb').addEventListener('click', function () { openLightbox(p); });
       container.appendChild(fig);
     });
@@ -508,8 +519,12 @@
     var img = lightbox.querySelector('.lightbox__img');
     img.src = objectURL(photo.full || photo.thumb);
     var cap = lightbox.querySelector('.lightbox__cap');
-    cap.textContent = photo.caption || '';
-    cap.hidden = !photo.caption;
+    cap.innerHTML = esc(photo.caption || '');
+    if (photo.source) {
+      cap.appendChild(document.createTextNode(' '));
+      cap.appendChild(sourceLink(photo.source));
+    }
+    cap.hidden = !(photo.caption || photo.source);
     lightbox.hidden = false;
   }
 
@@ -520,7 +535,11 @@
     lightbox.querySelector('.lightbox__cap').textContent = '';
   }
 
-  lightbox.addEventListener('click', closeLightbox);
+  lightbox.addEventListener('click', function (e) {
+    // 元ページのリンクを押したときは閉じない
+    if (e.target.closest('.photo__src')) return;
+    closeLightbox();
+  });
 
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') closeLightbox();
@@ -641,6 +660,7 @@
   function setupPhotos(form, ownerId, seedRefFrom) {
     var draft = ownerId ? photosOf(ownerId).slice() : [];
     var removed = [];
+    var refSource = '';   // 「モデルを探す」で控えた、見つけたページのURL
 
     if (!ownerId && seedRefFrom) {
       draft = photosOf(seedRefFrom, 'ref').map(copyPhoto);
@@ -648,39 +668,111 @@
 
     ['ref', 'self'].forEach(draw);
 
+    /** ファイル（選択・貼り付け・ドロップ）をまとめて取り込む */
+    function addFiles(kind, files, source) {
+      files = Array.prototype.slice.call(files || []).filter(function (f) {
+        return f && (f.type || '').indexOf('image/') === 0;
+      });
+      if (!files.length) return Promise.resolve(0);
+
+      toast('画像を処理しています…');
+      // 並列で処理するので、順番は選んだときの添字で固定する
+      var base = Date.now();
+      return Promise.all(files.map(function (f, i) {
+        return Photos.process(f).then(function (out) {
+          return {
+            id: uid(),
+            recordId: ownerId || null,
+            kind: kind,
+            full: out.full,
+            thumb: out.thumb,
+            width: out.width,
+            height: out.height,
+            caption: '',
+            source: source || '',
+            createdAt: base + i
+          };
+        });
+      })).then(function (added) {
+        draft = draft.concat(added);
+        draw(kind);
+        toast(added.length + '枚追加しました');
+        return added.length;
+      }).catch(function (err) {
+        console.error(err);
+        toast('画像を読み込めませんでした');
+        return 0;
+      });
+    }
+
     form.querySelectorAll('[data-upload]').forEach(function (input) {
+      // 自分で用意した写真なので、探したページのリンクは付けない
       input.addEventListener('change', function () {
-        var kind = input.dataset.upload;
-        var files = Array.prototype.slice.call(input.files || []);
+        addFiles(input.dataset.upload, input.files, '');
         input.value = '';
-        if (!files.length) return;
-        toast('画像を処理しています…');
-        // 並列で処理するので、順番は選んだときの添字で固定する
-        var base = Date.now();
-        Promise.all(files.map(function (f, i) {
-          return Photos.process(f).then(function (out) {
-            return {
-              id: uid(),
-              recordId: ownerId || null,
-              kind: kind,
-              full: out.full,
-              thumb: out.thumb,
-              width: out.width,
-              height: out.height,
-              caption: '',
-              createdAt: base + i
-            };
-          });
-        })).then(function (added) {
-          draft = draft.concat(added);
-          draw(kind);
-          toast(added.length + '枚追加しました');
-        }).catch(function (err) {
-          console.error(err);
-          toast('画像を読み込めませんでした');
+      });
+    });
+
+    // 画像をドラッグ&ドロップでも入れられるようにする（パソコン向け）
+    ['ref', 'self'].forEach(function (kind) {
+      var zone = form.querySelector('[data-slot-photos="' + kind + '"]');
+      if (!zone) return;
+      ['dragenter', 'dragover'].forEach(function (t) {
+        zone.addEventListener(t, function (e) {
+          e.preventDefault();
+          zone.classList.add('is-over');
+        });
+      });
+      ['dragleave', 'drop'].forEach(function (t) {
+        zone.addEventListener(t, function () { zone.classList.remove('is-over'); });
+      });
+      zone.addEventListener('drop', function (e) {
+        e.preventDefault();
+        addFiles(kind, (e.dataTransfer || {}).files, '');
+      });
+    });
+
+    form.querySelectorAll('[data-action="paste-photo"]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var kind = btn.dataset.kind;
+        pasteImages().then(function (files) {
+          if (!files.length) {
+            toast('クリップボードに画像がありません');
+            return;
+          }
+          addFiles(kind, files, kind === 'ref' ? refSource : '');
+        }, function () {
+          toast('貼り付けできませんでした。Ctrl+V（スマホは長押しで貼り付け）もお試しください');
         });
       });
     });
+
+    // ページのどこで Ctrl+V しても参考モデルに入るようにしておく
+    var onPaste = function (e) {
+      if (!document.body.contains(form)) { document.removeEventListener('paste', onPaste); return; }
+      var t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+      var items = ((e.clipboardData || {}).files) || [];
+      if (!items.length) return;
+      e.preventDefault();
+      addFiles('ref', items, refSource);
+    };
+    document.addEventListener('paste', onPaste);
+
+    var findBtn = form.querySelector('[data-action="find-model"]');
+    if (findBtn) {
+      findBtn.addEventListener('click', function () {
+        openFindSheet({
+          record: {
+            styleName: form.elements.styleName ? form.elements.styleName.value : '',
+            lengthGenre: form.elements.lengthGenre ? form.elements.lengthGenre.value : ''
+          },
+          source: refSource,
+          onSource: function (url) { refSource = url; },
+          onFiles: function (files) { addFiles('ref', files, refSource); }
+        });
+      });
+    }
 
     function draw(kind) {
       var slot = form.querySelector('[data-slot-photos="' + kind + '"]');
@@ -732,6 +824,7 @@
 
         fig.appendChild(item);
         fig.appendChild(capBtn);
+        if (p.source) fig.appendChild(sourceLink(p.source));
         slot.appendChild(fig);
       });
     }
@@ -743,7 +836,7 @@
           return {
             id: p.id, recordId: id, kind: p.kind, full: p.full, thumb: p.thumb,
             width: p.width, height: p.height, masked: !!p.masked,
-            caption: p.caption || '', createdAt: p.createdAt
+            caption: p.caption || '', source: p.source || '', createdAt: p.createdAt
           };
         });
       },
@@ -764,8 +857,39 @@
     return {
       id: uid(), recordId: null, kind: p.kind, full: p.full, thumb: p.thumb,
       width: p.width, height: p.height, masked: !!p.masked,
-      caption: p.caption || '', createdAt: Date.now()
+      caption: p.caption || '', source: p.source || '', createdAt: Date.now()
     };
+  }
+
+  /** 「元ページ」へのリンク。参考にした写真の出どころを開けるようにする */
+  function sourceLink(url) {
+    var a = document.createElement('a');
+    a.className = 'photo__src';
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.innerHTML = icon('open') + '<span>' + esc(Models.hostOf(url) || '元ページ') + '</span>';
+    return a;
+  }
+
+  /**
+   * クリップボードの画像を取り出す。
+   * 対応していないブラウザや、許可が下りないときは reject する（Ctrl+V での貼り付けは別で拾う）。
+   */
+  function pasteImages() {
+    if (!navigator.clipboard || !navigator.clipboard.read) return Promise.reject(new Error('no clipboard'));
+    return navigator.clipboard.read().then(function (items) {
+      var jobs = [];
+      items.forEach(function (item, n) {
+        item.types.filter(function (t) { return t.indexOf('image/') === 0; }).slice(0, 1)
+          .forEach(function (type) {
+            jobs.push(item.getType(type).then(function (blob) {
+              return new File([blob], 'pasted-' + (n + 1) + '.' + type.split('/')[1], { type: type });
+            }));
+          });
+      });
+      return Promise.all(jobs);
+    });
   }
 
   /** お店とGoogleマップの紐付け */
@@ -833,6 +957,88 @@
   var mapSheet = null;
   var mapDone = null;
   var mapInfo = null;
+
+  /* ---------------- 参考モデルを探す ---------------- */
+
+  var findSheet = null;
+  var findOpts = null;
+
+  function openFindSheet(opts) {
+    findOpts = opts;
+
+    if (!findSheet) {
+      findSheet = document.getElementById('findsheet');
+
+      findSheet.addEventListener('click', function (e) {
+        var act = e.target.closest('[data-act]');
+        if (act && act.dataset.act === 'close') { closeFindSheet(); return; }
+        if (act && act.dataset.act === 'paste') {
+          pasteImages().then(function (files) {
+            if (!files.length) { toast('クリップボードに画像がありません'); return; }
+            var cb = findOpts && findOpts.onFiles;
+            closeFindSheet();
+            if (cb) cb(files);
+          }, function () {
+            toast('貼り付けできませんでした。画像を長押しして「画像をコピー」してからお試しください');
+          });
+          return;
+        }
+
+        var seg = e.target.closest('.gender');
+        if (seg) {
+          store('hk-model-gender', seg.dataset.g);
+          paintFind(true);
+        }
+      });
+
+      findSheet.querySelector('[data-f="q"]').addEventListener('input', function () { drawSites(); });
+      findSheet.querySelector('[data-f="src"]').addEventListener('input', function () {
+        var url = Models.pickUrl(this.value);
+        if (findOpts && findOpts.onSource) findOpts.onSource(url);
+        var note = findSheet.querySelector('[data-f="srcnote"]');
+        note.hidden = !this.value.trim();
+        note.textContent = url
+          ? 'このあと追加する写真に「' + Models.hostOf(url) + '」へのリンクを付けます'
+          : 'URLが見つかりません。ページのアドレスを貼り付けてください';
+      });
+    }
+
+    var src = findSheet.querySelector('[data-f="src"]');
+    src.value = opts.source || '';
+    // すでにリンクを控えているときは、それが付くことを見えるようにしておく
+    src.dispatchEvent(new Event('input'));
+    findSheet.querySelector('[data-f="srcnote"]').hidden = !opts.source;
+    paintFind(false);
+    findSheet.hidden = false;
+  }
+
+  /** @param {boolean} regen キーワードを作り直すか（性別を変えたときだけ） */
+  function paintFind(regen) {
+    var gender = store('hk-model-gender') || 'none';
+    findSheet.querySelectorAll('.gender').forEach(function (s) {
+      s.classList.toggle('is-on', s.dataset.g === gender);
+    });
+    var q = findSheet.querySelector('[data-f="q"]');
+    if (regen || !q.value.trim()) q.value = Models.query(findOpts.record, gender);
+    drawSites();
+  }
+
+  function drawSites() {
+    var q = findSheet.querySelector('[data-f="q"]').value.trim();
+    findSheet.querySelector('[data-f="sites"]').innerHTML = Models.SITES.map(function (s) {
+      return '<a class="siteitem" target="_blank" rel="noopener noreferrer" href="' +
+        esc(s.link(q)) + '">' +
+        '<span class="siteitem__body">' +
+          '<span class="siteitem__name">' + esc(s.name) + '</span>' +
+          '<span class="siteitem__note">' + esc(s.note) + '</span>' +
+        '</span>' + icon('open') + '</a>';
+    }).join('');
+  }
+
+  function closeFindSheet() {
+    if (findSheet) findSheet.hidden = true;
+    findOpts = null;
+  }
 
   function openMapSheet(done) {
     if (!mapSheet) {

@@ -1,7 +1,7 @@
 /* オフラインでも開けるようにアプリの外枠をキャッシュする。
    ただしキャッシュ優先だと、更新しても古い画面が出続けてしまう。
    そのためオンラインのときは常にネットワークを先に見て、取れなければキャッシュを返す。 */
-var CACHE = 'hair-karte-v10';
+var CACHE = 'hair-karte-v11';
 var ASSETS = [
   './',
   './index.html',
@@ -11,6 +11,7 @@ var ASSETS = [
   './js/mask.js',
   './js/head.js',
   './js/maps.js',
+  './js/models.js',
   './js/app.js',
   './manifest.json',
   './icon.svg'

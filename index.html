@@ -129,6 +129,18 @@
     <path d="M4.5 12.5l5 5 10-11"/>
   </symbol>
 
+  <symbol id="i-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M13.5 4.5H19.5V10.5"/><path d="M19.5 4.5L11 13"/>
+    <path d="M18 14.5v4a2 2 0 01-2 2H5.5a2 2 0 01-2-2V8a2 2 0 012-2h4"/>
+  </symbol>
+
+  <symbol id="i-model" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6.2 11.5v-2a5.8 5.8 0 0111.6 0v2"/>
+    <path d="M6.2 10.5c0-3 2.6-4.6 5.8-4.6s5.8 1.6 5.8 4.6"/>
+    <path d="M7.6 11.5v1.8a4.4 4.4 0 108.8 0v-1.8"/>
+    <path d="M4.2 21c1.2-2.4 4.2-3.6 7.8-3.6s6.6 1.2 7.8 3.6"/>
+  </symbol>
+
   <symbol id="i-photo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
     <rect x="3" y="5" width="18" height="14" rx="2.5"/>
     <circle cx="8.5" cy="10" r="1.6"/>
@@ -233,6 +245,52 @@
 </div>
 
 <!-- Googleマップのリンクを取り込むシート -->
+<div class="sheet" id="findsheet" hidden>
+  <div class="sheet__scrim" data-act="close"></div>
+  <div class="sheet__panel" role="dialog" aria-modal="true">
+    <div class="sheet__head">
+      <div>
+        <h3 class="sheet__title">参考モデルを探す</h3>
+        <p class="sheet__hint">ヘアカタログから写真を持ち帰ります</p>
+      </div>
+      <button class="btn btn--ghost" type="button" data-act="close">閉じる</button>
+    </div>
+
+    <label class="field">
+      <span class="field__label">検索キーワード</span>
+      <input class="input" type="text" data-f="q" placeholder="例）メンズ ツーブロック マッシュ ヘアスタイル">
+    </label>
+
+    <div class="genders" data-f="gender" role="group" aria-label="性別で絞る">
+      <button class="gender" type="button" data-g="mens">メンズ</button>
+      <button class="gender" type="button" data-g="ladys">レディース</button>
+      <button class="gender" type="button" data-g="none">指定なし</button>
+    </div>
+
+    <div class="sitelist" data-f="sites"></div>
+
+    <ol class="steps">
+      <li>上のサイトで気に入った写真を開く</li>
+      <li>写真を長押し（PCは右クリック）して「画像をコピー」</li>
+      <li>アプリに戻って「画像を貼り付け」を押す</li>
+    </ol>
+
+    <label class="field">
+      <span class="field__label">見つけたページのURL（任意）</span>
+      <textarea class="input" data-f="src" rows="2"
+                placeholder="貼り付けておくと、あとで元のページを開けます"></textarea>
+    </label>
+    <p class="sheet__note" data-f="srcnote" hidden></p>
+
+    <div class="sheet__foot">
+      <button class="btn" type="button" data-act="close">閉じる</button>
+      <button class="btn btn--primary" type="button" data-act="paste">
+        <svg class="ico" aria-hidden="true"><use href="#i-paste"></use></svg>画像を貼り付け
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="sheet" id="mapsheet" hidden>
   <div class="sheet__scrim" data-act="close"></div>
   <div class="sheet__panel" role="dialog" aria-modal="true">
@@ -274,22 +332,35 @@
         <div class="photo-editors">
           <div class="photo-editor" data-kind="ref">
             <h4 class="sub">参考モデルの写真</h4>
-            <div class="thumbs thumbs--edit" data-slot-photos="ref"></div>
-            <label class="btn btn--upload">
-              画像を選ぶ
-              <input type="file" accept="image/*" multiple hidden data-upload="ref">
-            </label>
+            <div class="thumbs thumbs--edit dropzone" data-slot-photos="ref"></div>
+            <div class="photo-acts">
+              <button class="btn btn--primary" type="button" data-action="find-model">
+                <svg class="ico" aria-hidden="true"><use href="#i-model"></use></svg>モデルを探す
+              </button>
+              <button class="btn" type="button" data-action="paste-photo" data-kind="ref">
+                <svg class="ico" aria-hidden="true"><use href="#i-paste"></use></svg>画像を貼り付け
+              </button>
+              <label class="btn btn--upload">
+                画像を選ぶ
+                <input type="file" accept="image/*" multiple hidden data-upload="ref">
+              </label>
+            </div>
           </div>
           <div class="photo-editor" data-kind="self">
             <h4 class="sub">自分の写真（仕上がり）</h4>
-            <div class="thumbs thumbs--edit" data-slot-photos="self"></div>
-            <label class="btn btn--upload">
-              画像を選ぶ / 撮影
-              <input type="file" accept="image/*" multiple hidden data-upload="self">
-            </label>
+            <div class="thumbs thumbs--edit dropzone" data-slot-photos="self"></div>
+            <div class="photo-acts">
+              <label class="btn btn--upload">
+                画像を選ぶ / 撮影
+                <input type="file" accept="image/*" multiple hidden data-upload="self">
+              </label>
+              <button class="btn" type="button" data-action="paste-photo" data-kind="self">
+                <svg class="ico" aria-hidden="true"><use href="#i-paste"></use></svg>画像を貼り付け
+              </button>
+            </div>
           </div>
         </div>
-        <p class="hint">写真ごとに「向きを選ぶ」から前・後ろ・横などを付けられます。「顔を隠す」ではモザイク・ぼかし・ぬりつぶしで顔を隠せます。</p>
+        <p class="hint">「モデルを探す」でヘアカタログのサイトを開けます。気に入った写真をコピーして「画像を貼り付け」で登録できます（自分で撮った写真は「画像を選ぶ」から）。写真ごとに「向きを選ぶ」で前・後ろ・横などを付けられ、「顔を隠す」でモザイク・ぼかし・ぬりつぶしができます。</p>
       </fieldset>
 </template>
 
@@ -838,6 +909,7 @@
 <script src="js/mask.js"></script>
 <script src="js/head.js"></script>
 <script src="js/maps.js"></script>
+<script src="js/models.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
