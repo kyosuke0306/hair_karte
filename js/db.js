@@ -1,9 +1,10 @@
-/* IndexedDB ラッパー。カルテ本体(records)と写真(photos)を別ストアで保持する。 */
+/* IndexedDB ラッパー。カルテ(records)・注文シート(sheets)・スタイリング剤(products)と
+   写真(photos)を別ストアで保持する。写真は recordId で持ち主とつながる。 */
 (function (global) {
   'use strict';
 
   var DB_NAME = 'hair_karte';
-  var DB_VERSION = 2;
+  var DB_VERSION = 3;
   var dbPromise = null;
 
   function open() {
@@ -23,6 +24,10 @@
         // 注文シート（お店や日付を持たない、髪型の注文内容だけの雛形）
         if (!db.objectStoreNames.contains('sheets')) {
           db.createObjectStore('sheets', { keyPath: 'id' });
+        }
+        // スタイリング剤（いま使っているもの／使ってみたいもの）
+        if (!db.objectStoreNames.contains('products')) {
+          db.createObjectStore('products', { keyPath: 'id' });
         }
       };
       req.onsuccess = function () { resolve(req.result); };
@@ -149,11 +154,42 @@
       });
     },
 
+    /* ---- スタイリング剤 ---- */
+
+    allProducts: function () {
+      return tx(['products'], 'readonly').then(function (t) {
+        return wrap(t.objectStore('products').getAll());
+      }).then(function (rows) {
+        return rows.sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
+      });
+    },
+
+    putProduct: function (product) {
+      return tx(['products'], 'readwrite').then(function (t) {
+        t.objectStore('products').put(product);
+        return done(t);
+      }).then(function () { return product; });
+    },
+
+    /** スタイリング剤と、それに紐づく写真をまとめて削除 */
+    deleteProduct: function (id) {
+      return tx(['products', 'photos'], 'readwrite').then(function (t) {
+        t.objectStore('products').delete(id);
+        var cur = t.objectStore('photos').index('recordId').openCursor(IDBKeyRange.only(id));
+        cur.onsuccess = function (e) {
+          var cursor = e.target.result;
+          if (cursor) { cursor.delete(); cursor.continue(); }
+        };
+        return done(t);
+      });
+    },
+
     clearAll: function () {
-      return tx(['records', 'photos', 'sheets'], 'readwrite').then(function (t) {
+      return tx(['records', 'photos', 'sheets', 'products'], 'readwrite').then(function (t) {
         t.objectStore('records').clear();
         t.objectStore('photos').clear();
         t.objectStore('sheets').clear();
+        t.objectStore('products').clear();
         return done(t);
       });
     }

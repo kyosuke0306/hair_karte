@@ -141,6 +141,12 @@
     <path d="M4.2 21c1.2-2.4 4.2-3.6 7.8-3.6s6.6 1.2 7.8 3.6"/>
   </symbol>
 
+  <symbol id="i-wax" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9.5 2.8h5v3h-5z"/>
+    <path d="M8 9.4a3 3 0 012.2-2.9V5.8h3.6v.7A3 3 0 0116 9.4v9.8a2 2 0 01-2 2h-4a2 2 0 01-2-2z"/>
+    <path d="M8 12.6h8"/>
+  </symbol>
+
   <symbol id="i-photo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
     <rect x="3" y="5" width="18" height="14" rx="2.5"/>
     <circle cx="8.5" cy="10" r="1.6"/>
@@ -168,6 +174,10 @@
   <a class="tab" href="#/list" data-view="list">
     <svg class="ico tab__ico" aria-hidden="true"><use href="#i-karte"></use></svg>
     <span class="tab__label">カルテ</span>
+  </a>
+  <a class="tab" href="#/products" data-view="products">
+    <svg class="ico tab__ico" aria-hidden="true"><use href="#i-wax"></use></svg>
+    <span class="tab__label">スタイリング剤</span>
   </a>
   <a class="tab" href="#/stats" data-view="stats">
     <svg class="ico tab__ico" aria-hidden="true"><use href="#i-chart"></use></svg>
@@ -250,8 +260,8 @@
   <div class="sheet__panel" role="dialog" aria-modal="true">
     <div class="sheet__head">
       <div>
-        <h3 class="sheet__title">参考モデルを探す</h3>
-        <p class="sheet__hint">ヘアカタログから写真を持ち帰ります</p>
+        <h3 class="sheet__title" data-f="title">参考モデルを探す</h3>
+        <p class="sheet__hint" data-f="hint">ヘアカタログから写真を持ち帰ります</p>
       </div>
       <button class="btn btn--ghost" type="button" data-act="close">閉じる</button>
     </div>
@@ -628,6 +638,135 @@
   </section>
 </template>
 
+<!-- スタイリング剤 -->
+<template id="tpl-products">
+  <section class="view">
+    <div class="view-head">
+      <h2 class="view__title">スタイリング剤</h2>
+      <p class="view__lead">いま使っているものと、使ってみたいもの・美容師さんに勧められたものを分けて残せます。</p>
+    </div>
+
+    <section class="prodgroup">
+      <h3 class="prodgroup__title"><svg class="ico" aria-hidden="true"><use href="#i-check"></use></svg>いま使っている</h3>
+      <div class="cards cards--prod" data-f="using"></div>
+      <p class="muted" data-f="using-empty" hidden>まだ登録がありません。</p>
+    </section>
+
+    <section class="prodgroup">
+      <h3 class="prodgroup__title"><svg class="ico" aria-hidden="true"><use href="#i-star"></use></svg>使ってみたい・勧められた</h3>
+      <div class="cards cards--prod" data-f="want"></div>
+      <p class="muted" data-f="want-empty" hidden>まだ登録がありません。</p>
+    </section>
+
+    <div class="empty" id="product-empty" hidden>
+      <p class="empty__icon"><svg class="ico ico--empty" aria-hidden="true"><use href="#i-wax"></use></svg></p>
+      <p class="empty__title">スタイリング剤がありません</p>
+      <p class="empty__text">いま使っているワックスや、美容師さんに勧められたものを登録しておくと、次の来店で話が早くなります。</p>
+      <button class="btn btn--primary" data-action="new-product">最初の1本を登録する</button>
+    </div>
+  </section>
+</template>
+
+<template id="tpl-product-form">
+  <section class="view">
+    <form class="form" id="product-form" novalidate>
+      <div class="form-head">
+        <button class="btn btn--ghost" type="button" data-action="cancel"><svg class="ico" aria-hidden="true"><use href="#i-back"></use></svg>戻る</button>
+        <h2 class="form-head__title" id="product-form-title">スタイリング剤を登録</h2>
+        <button class="btn btn--primary" type="submit">保存</button>
+      </div>
+
+      <fieldset class="fs">
+        <legend class="fs__legend">どちらですか</legend>
+        <div class="kinds" role="group" aria-label="いま使っている／使ってみたい">
+          <button class="kind" type="button" data-k="using">
+            <svg class="ico" aria-hidden="true"><use href="#i-check"></use></svg>
+            <span class="kind__label">いま使っている</span>
+          </button>
+          <button class="kind" type="button" data-k="want">
+            <svg class="ico" aria-hidden="true"><use href="#i-star"></use></svg>
+            <span class="kind__label">使ってみたい・勧められた</span>
+          </button>
+        </div>
+        <input type="hidden" name="kind" value="using">
+      </fieldset>
+
+      <fieldset class="fs">
+        <legend class="fs__legend">商品</legend>
+
+        <div class="photo-acts photo-acts--find">
+          <button class="btn btn--primary" type="button" data-action="find-product">
+            <svg class="ico" aria-hidden="true"><use href="#i-search"></use></svg>商品を探す
+          </button>
+        </div>
+        <p class="hint">通販サイトや口コミサイトを開いて、商品名をコピーして貼り付けたり、写真を持ち帰ったりできます。</p>
+
+        <label class="field field--mt">
+          <span class="field__label">商品名 <b class="req">必須</b></span>
+          <input class="input" type="text" name="name" required list="dl-product" placeholder="例）ナカノ スタイリング タントN ワックス 6">
+          <datalist id="dl-product"></datalist>
+        </label>
+
+        <div class="grid grid--pair field--mt">
+          <label class="field">
+            <span class="field__label">ブランド</span>
+            <input class="input" type="text" name="brand" list="dl-brand" placeholder="例）ナカノ">
+            <datalist id="dl-brand"></datalist>
+          </label>
+          <label class="field">
+            <span class="field__label">種類</span>
+            <select class="input" name="type">
+              <option value="">選択しない</option>
+            </select>
+          </label>
+        </div>
+
+        <input type="hidden" name="source">
+        <div class="maplinked" data-f="srclinked" hidden>
+          <span class="maplinked__text"><svg class="ico" aria-hidden="true"><use href="#i-link"></use></svg><span data-f="srclabel"></span></span>
+          <button class="btn btn--small" type="button" data-action="src-clear">解除</button>
+        </div>
+      </fieldset>
+
+      <fieldset class="fs">
+        <legend class="fs__legend">写真</legend>
+        <div class="thumbs thumbs--edit dropzone" data-slot-photos="product"></div>
+        <div class="photo-acts">
+          <button class="btn" type="button" data-action="paste-photo" data-kind="product">
+            <svg class="ico" aria-hidden="true"><use href="#i-paste"></use></svg>画像を貼り付け
+          </button>
+          <label class="btn btn--upload">
+            画像を選ぶ / 撮影
+            <input type="file" accept="image/*" multiple hidden data-upload="product">
+          </label>
+        </div>
+        <p class="hint">パッケージの写真があると、お店で「これです」と見せられます。</p>
+      </fieldset>
+
+      <fieldset class="fs">
+        <legend class="fs__legend">メモ</legend>
+        <div class="grid">
+          <label class="field field--wide">
+            <span class="field__label">使ってみた感じ・勧められた理由</span>
+            <textarea class="input" name="note" rows="3" placeholder="例）ツヤは控えめ。夕方までキープできる／田中さんに「もう少しセット力が強いものを」と勧められた"></textarea>
+          </label>
+          <label class="field">
+            <span class="field__label">教えてくれた人</span>
+            <input class="input" type="text" name="fromWhom" list="dl-stylist" placeholder="例）田中さん">
+          </label>
+        </div>
+      </fieldset>
+
+      <div class="form-foot">
+        <button class="btn btn--primary btn--block" type="submit">保存する</button>
+        <button class="btn btn--ghost btn--block" type="button" data-action="delete-product" hidden>
+          <svg class="ico" aria-hidden="true"><use href="#i-trash"></use></svg>このスタイリング剤を削除
+        </button>
+      </div>
+    </form>
+  </section>
+</template>
+
 <template id="tpl-sheets">
   <section class="view">
     <div class="view-head">
@@ -972,6 +1111,7 @@
 <script src="js/head.js"></script>
 <script src="js/maps.js"></script>
 <script src="js/models.js"></script>
+<script src="js/products.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

@@ -11,6 +11,7 @@
     records: [],
     photos: [],          // 全写真のメタ + Blob
     sheets: [],          // 注文シート（お店や日付を持たない雛形）
+    products: [],        // スタイリング剤
     query: '',
     sort: 'date-desc'
   };
@@ -136,11 +137,13 @@
   /* ---------------- データ読み込み ---------------- */
 
   function reload() {
-    return Promise.all([DB.allRecords(), DB.allPhotos(), DB.allSheets()]).then(function (res) {
-      state.records = res[0];
-      state.photos = res[1];
-      state.sheets = res[2];
-    });
+    return Promise.all([DB.allRecords(), DB.allPhotos(), DB.allSheets(), DB.allProducts()])
+      .then(function (res) {
+        state.records = res[0];
+        state.photos = res[1];
+        state.sheets = res[2];
+        state.products = res[3];
+      });
   }
 
   function photosOf(recordId, kind) {
@@ -203,18 +206,25 @@
 
     var group = {
       detail: 'list', new: 'list', edit: 'list',
-      sheet: 'sheets', 'sheet-new': 'sheets', 'sheet-edit': 'sheets'
+      sheet: 'sheets', 'sheet-new': 'sheets', 'sheet-edit': 'sheets',
+      'product-new': 'products', 'product-edit': 'products'
     }[view] || view;
 
     document.querySelectorAll('.tab').forEach(function (t) {
       t.classList.toggle('is-active', t.dataset.view === group);
     });
 
-    // 追加ボタンは「カルテ」と「注文シート」でだけ出す
-    fabTarget = group === 'list' ? '#/new' : '#/sheet-new';
-    fab.hidden = !(group === 'list' || group === 'sheets') ||
-      view === 'new' || view === 'edit' || view === 'sheet-new' || view === 'sheet-edit';
-    fab.title = group === 'list' ? '新しいカルテを追加' : '新しい注文シートを追加';
+    // 追加ボタンは「カルテ」「注文シート」「スタイリング剤」で出す
+    var fabFor = {
+      list: { hash: '#/new', title: '新しいカルテを追加' },
+      sheets: { hash: '#/sheet-new', title: '新しい注文シートを追加' },
+      products: { hash: '#/product-new', title: 'スタイリング剤を登録' }
+    }[group];
+    var editing = ['new', 'edit', 'sheet-new', 'sheet-edit', 'product-new', 'product-edit']
+      .indexOf(view) > -1;
+    fabTarget = fabFor ? fabFor.hash : '#/new';
+    fab.hidden = !fabFor || editing;
+    fab.title = fabFor ? fabFor.title : '';
 
     // 美容室で使う画面（伝える・見せる）ではヘッダーやタブを隠して、内容だけにする
     var presenting = view === 'show' || view === 'say';
@@ -231,6 +241,9 @@
     if (view === 'sheet-edit' && id) return renderSheetForm(id);
     if (view === 'show' && id) return renderShow(id);
     if (view === 'say' && id) return renderSay(id);
+    if (view === 'products') return renderProducts();
+    if (view === 'product-new') return renderProductForm(null);
+    if (view === 'product-edit' && id) return renderProductForm(id);
     if (view === 'list') return renderList();
     if (view === 'stats') return renderStats();
     if (view === 'settings') return renderSettings();
@@ -657,7 +670,8 @@
 
   /**
    * 写真の追加・削除・キャプション・顔隠しをまとめて扱う。
-   * カルテと注文シートで同じものを使うので、持ち主の種類は問わない。
+   * カルテ・注文シート・スタイリング剤で同じものを使うので、持ち主の種類は問わない。
+   * 扱う写真の種類（ref / self / product）はフォームの [data-slot-photos] から決める。
    * ownerId: 編集中なら既存の写真を読み込む
    * seedRefFrom: 「この内容で新規」のとき、参考モデルの写真だけ引き継ぐ元のID
    */
@@ -666,11 +680,15 @@
     var removed = [];
     var refSource = '';   // 「モデルを探す」で控えた、見つけたページのURL
 
+    var kinds = Array.prototype.map.call(
+      form.querySelectorAll('[data-slot-photos]'),
+      function (el) { return el.dataset.slotPhotos; });
+
     if (!ownerId && seedRefFrom) {
       draft = photosOf(seedRefFrom, 'ref').map(copyPhoto);
     }
 
-    ['ref', 'self'].forEach(draw);
+    kinds.forEach(draw);
 
     /** ファイル（選択・貼り付け・ドロップ）をまとめて取り込む */
     function addFiles(kind, files, source) {
@@ -718,7 +736,7 @@
     });
 
     // 画像をドラッグ&ドロップでも入れられるようにする（パソコン向け）
-    ['ref', 'self'].forEach(function (kind) {
+    kinds.forEach(function (kind) {
       var zone = form.querySelector('[data-slot-photos="' + kind + '"]');
       if (!zone) return;
       ['dragenter', 'dragover'].forEach(function (t) {
@@ -751,15 +769,16 @@
       });
     });
 
-    // ページのどこで Ctrl+V しても参考モデルに入るようにしておく
+    // ページのどこで Ctrl+V しても、いちばん上の写真枠に入るようにしておく
     var onPaste = function (e) {
       if (!document.body.contains(form)) { document.removeEventListener('paste', onPaste); return; }
+      if (!kinds.length) return;
       var t = e.target;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
       var items = ((e.clipboardData || {}).files) || [];
       if (!items.length) return;
       e.preventDefault();
-      addFiles('ref', items, refSource);
+      addFiles(kinds[0], items, refSource);
     };
     document.addEventListener('paste', onPaste);
 
@@ -767,6 +786,11 @@
     if (findBtn) {
       findBtn.addEventListener('click', function () {
         openFindSheet({
+          title: '参考モデルを探す',
+          hint: 'ヘアカタログから写真を持ち帰ります',
+          sites: Models.SITES,
+          query: Models.query,
+          genders: true,
           record: {
             styleName: form.elements.styleName ? form.elements.styleName.value : '',
             lengthGenre: form.elements.lengthGenre ? form.elements.lengthGenre.value : ''
@@ -786,6 +810,9 @@
         slot.innerHTML = '<p class="muted">写真なし</p>';
         return;
       }
+      // 商品のパッケージ写真には、向きのキャプションも顔隠しも要らない
+      var hairPhoto = kind !== 'product';
+
       slot.innerHTML = '';
       list.forEach(function (p) {
         var fig = document.createElement('figure');
@@ -795,15 +822,18 @@
         item.className = 'thumb thumb--editable';
         item.innerHTML = '<img src="' + objectURL(p.thumb || p.full) + '" alt="">' +
           '<button type="button" class="thumb__del" title="削除">×</button>' +
-          '<button type="button" class="thumb__mask">' + icon('mask') + '顔を隠す</button>';
+          (hairPhoto ? '<button type="button" class="thumb__mask">' + icon('mask') + '顔を隠す</button>' : '');
 
-        var capBtn = document.createElement('button');
-        capBtn.type = 'button';
-        capBtn.className = 'photo__capbtn' + (p.caption ? ' is-set' : '');
-        capBtn.textContent = p.caption || '向きを選ぶ';
-        capBtn.addEventListener('click', function () {
-          openCaptionPicker(p, function () { draw(kind); });
-        });
+        var capBtn = null;
+        if (hairPhoto) {
+          capBtn = document.createElement('button');
+          capBtn.type = 'button';
+          capBtn.className = 'photo__capbtn' + (p.caption ? ' is-set' : '');
+          capBtn.textContent = p.caption || '向きを選ぶ';
+          capBtn.addEventListener('click', function () {
+            openCaptionPicker(p, function () { draw(kind); });
+          });
+        }
 
         item.querySelector('.thumb__del').addEventListener('click', function () {
           draft = draft.filter(function (x) { return x.id !== p.id; });
@@ -811,7 +841,7 @@
           draw(kind);
         });
 
-        item.querySelector('.thumb__mask').addEventListener('click', function () {
+        if (hairPhoto) item.querySelector('.thumb__mask').addEventListener('click', function () {
           MaskEditor.open(p, function (out) {
             p.full = out.full;
             p.thumb = out.thumb;
@@ -827,7 +857,7 @@
         });
 
         fig.appendChild(item);
-        fig.appendChild(capBtn);
+        if (capBtn) fig.appendChild(capBtn);
         if (p.source) fig.appendChild(sourceLink(p.source));
         slot.appendChild(fig);
       });
@@ -845,6 +875,8 @@
         });
       },
       removed: function () { return removed; },
+      /** 外から写真を足す（種類とリンクを指定できる） */
+      add: function (kind, files, source) { return addFiles(kind, files, source); },
       /** 注文シートを貼り付けたときに、参考モデルの写真を足す */
       addRefFrom: function (srcId) {
         var add = photosOf(srcId, 'ref').map(copyPhoto);
@@ -1007,6 +1039,10 @@
       });
     }
 
+    findSheet.querySelector('[data-f="title"]').textContent = opts.title;
+    findSheet.querySelector('[data-f="hint"]').textContent = opts.hint;
+    findSheet.querySelector('[data-f="gender"]').hidden = !opts.genders;
+
     var src = findSheet.querySelector('[data-f="src"]');
     src.value = opts.source || '';
     // すでにリンクを控えているときは、それが付くことを見えるようにしておく
@@ -1023,13 +1059,13 @@
       s.classList.toggle('is-on', s.dataset.g === gender);
     });
     var q = findSheet.querySelector('[data-f="q"]');
-    if (regen || !q.value.trim()) q.value = Models.query(findOpts.record, gender);
+    if (regen || !q.value.trim()) q.value = findOpts.query(findOpts.record, gender);
     drawSites();
   }
 
   function drawSites() {
     var q = findSheet.querySelector('[data-f="q"]').value.trim();
-    findSheet.querySelector('[data-f="sites"]').innerHTML = Models.SITES.map(function (s) {
+    findSheet.querySelector('[data-f="sites"]').innerHTML = findOpts.sites.map(function (s) {
       return '<a class="siteitem" target="_blank" rel="noopener noreferrer" href="' +
         esc(s.link(q)) + '">' +
         '<span class="siteitem__body">' +
@@ -1402,6 +1438,210 @@
   }
 
   /* ---------------- 注文シート ---------------- */
+
+  /* ---------------- スタイリング剤 ---------------- */
+
+  var PRODUCT_KINDS = { using: 'いま使っている', want: '使ってみたい・勧められた' };
+
+  function renderProducts() {
+    mount('tpl-products');
+    var root = main;
+
+    var empty = document.getElementById('product-empty');
+    empty.hidden = state.products.length !== 0;
+    empty.querySelector('[data-action="new-product"]')
+      .addEventListener('click', function () { go('#/product-new'); });
+    // 1件も無いうちは、空の見出しを2つ並べても意味がないので隠す
+    root.querySelectorAll('.prodgroup').forEach(function (g) {
+      g.hidden = state.products.length === 0;
+    });
+
+    Object.keys(PRODUCT_KINDS).forEach(function (kind) {
+      var wrap = root.querySelector('[data-f="' + kind + '"]');
+      var list = state.products.filter(function (p) { return (p.kind || 'using') === kind; });
+      root.querySelector('[data-f="' + kind + '-empty"]').hidden = list.length !== 0;
+
+      wrap.innerHTML = '';
+      list.forEach(function (p) {
+        var photo = photosOf(p.id, 'product')[0];
+        var sub = [p.brand, p.type].filter(Boolean).join(' ・ ');
+        var card = document.createElement('a');
+        card.className = 'card card--prod';
+        card.href = '#/product-edit/' + p.id;
+        card.innerHTML =
+          (photo
+            ? '<img class="card__img card__img--prod" src="' + objectURL(photo.thumb || photo.full) + '" alt="">'
+            : '<span class="card__img card__img--prod card__img--none">' + icon('wax') + '</span>') +
+          '<div class="card__body">' +
+            '<h4 class="card__style">' + esc(p.name || '（名前なし）') + '</h4>' +
+            (sub ? '<p class="card__salon">' + esc(sub) + '</p>' : '') +
+            (p.note ? '<p class="card__note">' + esc(p.note) + '</p>' : '') +
+            (p.fromWhom ? '<p class="card__from">' + esc(p.fromWhom) + 'に教わった</p>' : '') +
+          '</div>' +
+          '<span class="card__go">' + icon('back') + '</span>';
+        wrap.appendChild(card);
+      });
+    });
+  }
+
+  function renderProductForm(editId) {
+    mount('tpl-product-form');
+    var form = document.getElementById('product-form');
+    var base = editId ? state.products.filter(function (x) { return x.id === editId; })[0] : null;
+    if (editId && !base) { go('#/products'); return; }
+
+    document.getElementById('product-form-title').textContent =
+      editId ? 'スタイリング剤を編集' : 'スタイリング剤を登録';
+
+    // 種類の選択肢と、これまでに使った商品名・ブランドの候補
+    var typeSel = form.elements.type;
+    Products.TYPES.forEach(function (t) {
+      var o = document.createElement('option');
+      o.textContent = t;
+      typeSel.appendChild(o);
+    });
+    fillProductDatalists(form);
+
+    var photoBox = setupPhotos(form, editId, null);
+
+    if (base) {
+      ['name', 'brand', 'type', 'note', 'fromWhom', 'source', 'kind'].forEach(function (k) {
+        if (form.elements[k]) form.elements[k].value = base[k] == null ? '' : base[k];
+      });
+      form.querySelector('[data-action="delete-product"]').hidden = false;
+    }
+    if (!form.elements.kind.value) form.elements.kind.value = 'using';
+
+    function paintKind() {
+      form.querySelectorAll('.kind').forEach(function (b) {
+        b.classList.toggle('is-on', b.dataset.k === form.elements.kind.value);
+      });
+    }
+    form.querySelectorAll('.kind').forEach(function (b) {
+      b.addEventListener('click', function () {
+        form.elements.kind.value = b.dataset.k;
+        paintKind();
+      });
+    });
+    paintKind();
+
+    function paintSource() {
+      var url = form.elements.source.value;
+      form.querySelector('[data-f="srclinked"]').hidden = !url;
+      if (url) {
+        form.querySelector('[data-f="srclabel"]').textContent =
+          '商品ページ（' + (Models.hostOf(url) || 'リンク') + '）を記録しています';
+      }
+    }
+    form.querySelector('[data-action="src-clear"]').addEventListener('click', function () {
+      form.elements.source.value = '';
+      paintSource();
+    });
+    paintSource();
+
+    form.querySelector('[data-action="find-product"]').addEventListener('click', function () {
+      openFindSheet({
+        title: 'スタイリング剤を探す',
+        hint: '通販・口コミサイトから商品名や写真を持ち帰ります',
+        sites: Products.SITES,
+        query: Products.query,
+        genders: false,
+        record: {
+          name: form.elements.name.value,
+          brand: form.elements.brand.value,
+          type: form.elements.type.value
+        },
+        source: form.elements.source.value,
+        onSource: function (url) {
+          form.elements.source.value = url;
+          paintSource();
+        },
+        onFiles: function (files) {
+          photoBox.add('product', files, form.elements.source.value);
+        }
+      });
+    });
+
+    form.querySelector('[data-action="cancel"]').addEventListener('click', function () {
+      history.length > 1 ? history.back() : go('#/products');
+    });
+
+    if (base) {
+      form.querySelector('[data-action="delete-product"]').addEventListener('click', function () {
+        if (!confirm('このスタイリング剤を削除します。写真も一緒に消えます。よろしいですか？')) return;
+        DB.deleteProduct(base.id).then(reload).then(function () {
+          toast('削除しました');
+          go('#/products');
+        });
+      });
+    }
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (!form.elements.name.value.trim()) {
+        toast('商品名を入力してください');
+        form.elements.name.focus();
+        return;
+      }
+
+      var id = editId || uid();
+      var product = {
+        id: id,
+        kind: form.elements.kind.value || 'using',
+        name: form.elements.name.value.trim(),
+        brand: form.elements.brand.value.trim(),
+        type: form.elements.type.value,
+        note: form.elements.note.value.trim(),
+        fromWhom: form.elements.fromWhom.value.trim(),
+        source: form.elements.source.value.trim(),
+        createdAt: base ? base.createdAt : Date.now(),
+        updatedAt: Date.now()
+      };
+
+      DB.putProduct(product)
+        .then(function () { return DB.deletePhotos(photoBox.removed()); })
+        .then(function () { return DB.putPhotos(photoBox.photosFor(id)); })
+        .then(reload)
+        .then(function () {
+          toast(editId ? '更新しました' : '登録しました');
+          go('#/products');
+        })
+        .catch(function (err) {
+          console.error(err);
+          toast('保存できませんでした：' + (err && err.name === 'QuotaExceededError' ? '端末の空き容量が足りません' : 'エラーが発生しました'));
+        });
+    });
+  }
+
+  /** これまでに登録した商品名・ブランド・担当者を入力候補に出す */
+  function fillProductDatalists(form) {
+    var fill = function (id, values) {
+      var dl = form.querySelector('#' + id);
+      if (!dl) return;
+      dl.innerHTML = Object.keys(values).map(function (v) {
+        return '<option value="' + esc(v) + '"></option>';
+      }).join('');
+    };
+    var names = {}, brands = {}, whom = {};
+    state.products.forEach(function (p) {
+      if (p.name) names[p.name] = true;
+      if (p.brand) brands[p.brand] = true;
+      if (p.fromWhom) whom[p.fromWhom] = true;
+    });
+    state.records.forEach(function (r) { if (r.stylist) whom[r.stylist] = true; });
+    fill('dl-product', names);
+    fill('dl-brand', brands);
+
+    var dl = document.getElementById('dl-stylist');
+    if (!dl) {
+      dl = document.createElement('datalist');
+      dl.id = 'dl-stylist';
+      form.appendChild(dl);
+    }
+    dl.innerHTML = Object.keys(whom).map(function (v) {
+      return '<option value="' + esc(v) + '"></option>';
+    }).join('');
+  }
 
   function renderSheets() {
     mount('tpl-sheets');
@@ -1812,7 +2052,7 @@
     });
 
     main.querySelector('[data-action="wipe"]').addEventListener('click', function () {
-      if (!confirm('すべてのカルテ・注文シート・写真を削除します。元に戻せません。よろしいですか？')) return;
+      if (!confirm('すべてのカルテ・注文シート・スタイリング剤・写真を削除します。元に戻せません。よろしいですか？')) return;
       if (!confirm('本当に削除しますか？')) return;
       DB.clearAll().then(reload).then(function () {
         toast('すべてのデータを削除しました');
@@ -1827,6 +2067,7 @@
     var lines = [
       ['カルテ', state.records.length + '件'],
       ['注文シート', state.sheets.length + '件'],
+      ['スタイリング剤', state.products.length + '件'],
       ['写真', state.photos.length + '枚'],
       ['写真の容量', (photoBytes / 1048576).toFixed(1) + ' MB']
     ];
@@ -1854,17 +2095,18 @@
         return {
           id: p.id, recordId: p.recordId, kind: p.kind,
           width: p.width, height: p.height, masked: !!p.masked,
-          caption: p.caption || '', createdAt: p.createdAt,
+          caption: p.caption || '', source: p.source || '', createdAt: p.createdAt,
           full: d[0], thumb: d[1]
         };
       });
     })).then(function (photos) {
       var payload = {
         app: 'hair_karte',
-        version: 2,
+        version: 3,
         exportedAt: new Date().toISOString(),
         records: state.records,
         sheets: state.sheets,
+        products: state.products,
         photos: photos
       };
       var blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
@@ -1894,9 +2136,11 @@
         toast('ヘアカルテのバックアップファイルではないようです');
         return;
       }
-      var sheetCount = Array.isArray(data.sheets) ? data.sheets.length : 0;
+      var sheets = Array.isArray(data.sheets) ? data.sheets : [];
+      var products = Array.isArray(data.products) ? data.products : [];
       var msg = 'カルテ ' + data.records.length + '件' +
-        (sheetCount ? '・注文シート ' + sheetCount + '件' : '') +
+        (sheets.length ? '・注文シート ' + sheets.length + '件' : '') +
+        (products.length ? '・スタイリング剤 ' + products.length + '件' : '') +
         'を読み込みます。同じIDのものは上書きされます。よろしいですか？';
       if (!confirm(msg)) return;
 
@@ -1904,16 +2148,15 @@
         return {
           id: p.id, recordId: p.recordId, kind: p.kind,
           width: p.width, height: p.height, masked: !!p.masked,
-          caption: p.caption || '', createdAt: p.createdAt,
+          caption: p.caption || '', source: p.source || '', createdAt: p.createdAt,
           full: p.full ? Photos.dataURLtoBlob(p.full) : null,
           thumb: p.thumb ? Photos.dataURLtoBlob(p.thumb) : null
         };
       });
 
-      var sheets = Array.isArray(data.sheets) ? data.sheets : [];
-
       Promise.all(data.records.map(function (r) { return DB.putRecord(r); }))
         .then(function () { return Promise.all(sheets.map(function (sh) { return DB.putSheet(sh); })); })
+        .then(function () { return Promise.all(products.map(function (pr) { return DB.putProduct(pr); })); })
         .then(function () { return DB.putPhotos(photos); })
         .then(reload)
         .then(function () {

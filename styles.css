@@ -488,6 +488,55 @@ body.is-showing .main { max-width: 720px; padding: 0; }
 .card__stars { margin-top: 3px; }
 .card__stars .star-ico { width: 12px; height: 12px; }
 
+/* ---- スタイリング剤 ---- */
+.prodgroup + .prodgroup { margin-top: 22px; }
+
+.prodgroup__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+
+.prodgroup__title .ico { width: 15px; height: 15px; }
+.cards--prod .card { align-items: flex-start; }
+
+/* 商品は正方形に切ると欠けるので、全体が入るようにする */
+.card__img--prod { object-fit: contain; padding: 4px; }
+.card__note { font-size: 12px; color: var(--text-muted); margin-top: 4px; overflow-wrap: anywhere; }
+.card__from { font-size: 11px; color: var(--accent); margin-top: 4px; }
+
+.kinds { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.kind {
+  appearance: none;
+  font: inherit;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 14px 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text-muted);
+}
+
+.kind__label { font-size: 13px; font-weight: 700; line-height: 1.35; text-align: center; }
+.kind .ico { width: 20px; height: 20px; }
+
+.kind.is-on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+
+.photo-acts--find { margin-top: 0; }
+
 .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
 
 .chip {
