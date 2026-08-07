@@ -4,7 +4,7 @@
   'use strict';
 
   var DB_NAME = 'hair_karte';
-  var DB_VERSION = 3;
+  var DB_VERSION = 4;
   var dbPromise = null;
 
   function open() {
@@ -28,6 +28,10 @@
         // スタイリング剤（いま使っているもの／使ってみたいもの）
         if (!db.objectStoreNames.contains('products')) {
           db.createObjectStore('products', { keyPath: 'id' });
+        }
+        // 髪質など、記録ごとではなく1つだけ持つもの
+        if (!db.objectStoreNames.contains('profile')) {
+          db.createObjectStore('profile', { keyPath: 'id' });
         }
       };
       req.onsuccess = function () { resolve(req.result); };
@@ -184,12 +188,29 @@
       });
     },
 
+    /* ---- 髪質（1つだけ持つ） ---- */
+
+    getProfile: function () {
+      return tx(['profile'], 'readonly').then(function (t) {
+        return wrap(t.objectStore('profile').get('me'));
+      }).then(function (row) { return row || { id: 'me' }; });
+    },
+
+    putProfile: function (profile) {
+      profile.id = 'me';
+      return tx(['profile'], 'readwrite').then(function (t) {
+        t.objectStore('profile').put(profile);
+        return done(t);
+      }).then(function () { return profile; });
+    },
+
     clearAll: function () {
-      return tx(['records', 'photos', 'sheets', 'products'], 'readwrite').then(function (t) {
+      return tx(['records', 'photos', 'sheets', 'products', 'profile'], 'readwrite').then(function (t) {
         t.objectStore('records').clear();
         t.objectStore('photos').clear();
         t.objectStore('sheets').clear();
         t.objectStore('products').clear();
+        t.objectStore('profile').clear();
         return done(t);
       });
     }

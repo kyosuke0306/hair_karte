@@ -532,6 +532,35 @@
   <section class="view">
     <div class="summary" id="summary"></div>
 
+    <!-- 髪質はカルテごとではなく、この人の性質なので1つだけ持つ -->
+    <details class="foldout foldout--hair" id="hair-fold">
+      <summary class="foldout__head"><span data-f="hairhead">髪質を登録する</span></summary>
+      <div class="hairbox">
+        <p class="hint">毎回入れる必要はありません。一度選んでおけば、次からはそのままです。</p>
+        <div class="pickrow">
+          <span class="field__label">毛量</span>
+          <div class="tagrow" data-f="hairAmount"></div>
+        </div>
+        <div class="pickrow">
+          <span class="field__label">髪の太さ</span>
+          <div class="tagrow" data-f="hairThickness"></div>
+        </div>
+        <div class="pickrow">
+          <span class="field__label">かたさ</span>
+          <div class="tagrow" data-f="hairFirmness"></div>
+        </div>
+        <div class="pickrow">
+          <span class="field__label">くせ</span>
+          <div class="tagrow" data-f="hairWave"></div>
+        </div>
+        <div class="pickrow">
+          <span class="field__label">気になるところ（いくつでも）</span>
+          <div class="tagrow" data-f="hairTraits"></div>
+        </div>
+        <p class="hint">押すだけで選べます。もう一度押すと外れます。選んだ内容はすぐ保存されます。</p>
+      </div>
+    </details>
+
     <div class="filterbar">
       <div class="searchbox">
         <svg class="ico searchbox__ico" aria-hidden="true"><use href="#i-search"></use></svg>
@@ -573,8 +602,10 @@
 
     <div class="show__body">
       <header class="show__head">
+        <p class="show__eyebrow" data-f="eyebrow" hidden>ヘアスタイル</p>
         <h1 class="show__title" data-f="title"></h1>
-        <p class="show__sub" data-f="sub"></p>
+        <div class="show__chips" data-f="chips" hidden></div>
+        <p class="show__sub" data-f="sub" hidden></p>
       </header>
 
       <p class="say__lead">上から順に読めば、そのまま注文になります。伝えた項目はタップでチェックできます。</p>
@@ -610,8 +641,10 @@
 
     <div class="show__body">
       <header class="show__head">
+        <p class="show__eyebrow" data-f="eyebrow" hidden>ヘアスタイル</p>
         <h1 class="show__title" data-f="title"></h1>
-        <p class="show__sub" data-f="sub"></p>
+        <div class="show__chips" data-f="chips" hidden></div>
+        <p class="show__sub" data-f="sub" hidden></p>
       </header>
 
       <div id="show-headmap" class="show__map"></div>

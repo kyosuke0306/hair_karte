@@ -12,6 +12,7 @@
     photos: [],          // 全写真のメタ + Blob
     sheets: [],          // 注文シート（お店や日付を持たない雛形）
     products: [],        // スタイリング剤
+    profile: {},         // 髪質（記録ごとではなく1つだけ）
     query: '',
     sort: 'date-desc'
   };
@@ -137,12 +138,13 @@
   /* ---------------- データ読み込み ---------------- */
 
   function reload() {
-    return Promise.all([DB.allRecords(), DB.allPhotos(), DB.allSheets(), DB.allProducts()])
+    return Promise.all([DB.allRecords(), DB.allPhotos(), DB.allSheets(), DB.allProducts(), DB.getProfile()])
       .then(function (res) {
         state.records = res[0];
         state.photos = res[1];
         state.sheets = res[2];
         state.products = res[3];
+        state.profile = res[4];
       });
   }
 
@@ -279,6 +281,7 @@
 
     main.querySelector('[data-action="new"]').addEventListener('click', function () { go('#/new'); });
 
+    setupHair();
     drawSummary();
     drawCards();
   }
@@ -391,6 +394,106 @@
         '</div>';
       wrap.appendChild(card);
     });
+  }
+
+  /* ---------------- 髪質（1つだけ持つ） ---------------- */
+
+  /** 髪質の選択肢。書かずに押すだけで決められるようにする */
+  var HAIR = {
+    hairAmount: { label: '毛量', options: ['少なめ', 'ふつう', '多め'] },
+    hairThickness: { label: '髪の太さ', options: ['細い', 'ふつう', '太い'] },
+    hairFirmness: { label: 'かたさ', options: ['やわらかい', 'ふつう', 'かたい'] },
+    hairWave: { label: 'くせ', options: ['直毛', '少しうねる', 'くせ毛', '強いくせ'] },
+    hairTraits: {
+      label: '気になるところ', multi: true,
+      options: ['つむじが割れる', '前髪が浮く', '襟足がはねる', 'ハチが張っている',
+        '顔まわりが浮く', '広がりやすい', 'ぺたんとなりやすい', '猫っ毛', '硬くて収まらない']
+    }
+  };
+
+  var HAIR_KEYS = ['hairAmount', 'hairThickness', 'hairFirmness', 'hairWave', 'hairTraits'];
+
+  /** 選んだ髪質を「毛量 多め」のような並びで返す */
+  function hairSummary(p) {
+    var out = [];
+    HAIR_KEYS.forEach(function (k) {
+      var v = p && p[k];
+      if (!v || (Array.isArray(v) && !v.length)) return;
+      if (Array.isArray(v)) v.forEach(function (x) { out.push(x); });
+      else out.push(HAIR[k].label + ' ' + v);
+    });
+    return out;
+  }
+
+  /**
+   * カルテのタブに1つだけ持つ髪質。
+   * 記録ごとに入れ直すものではないので、選んだ時点ですぐ保存する。
+   */
+  function setupHair() {
+    var fold = document.getElementById('hair-fold');
+    if (!fold) return;
+    var profile = state.profile || {};
+
+    function head() {
+      var list = hairSummary(profile);
+      fold.querySelector('[data-f="hairhead"]').textContent =
+        list.length ? '髪質：' + list.join(' ・ ') : '髪質を登録する（1回だけ）';
+    }
+
+    function save() {
+      var next = { id: 'me' };
+      HAIR_KEYS.forEach(function (k) { next[k] = profile[k]; });
+      next.updatedAt = Date.now();
+      DB.putProfile(next).then(function () { state.profile = next; });
+    }
+
+    HAIR_KEYS.forEach(function (key) {
+      var conf = HAIR[key];
+      var box = fold.querySelector('[data-f="' + key + '"]');
+      if (!box) return;
+
+      function chosen() {
+        var v = profile[key];
+        if (!v) return [];
+        return Array.isArray(v) ? v.slice() : [v];
+      }
+
+      function paint() {
+        var on = chosen();
+        box.querySelectorAll('.tag').forEach(function (b) {
+          b.classList.toggle('is-on', on.indexOf(b.dataset.v) > -1);
+        });
+      }
+
+      box.innerHTML = '';
+      conf.options.forEach(function (v) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'tag';
+        b.dataset.v = v;
+        b.textContent = v;
+        b.addEventListener('click', function () {
+          var on = chosen();
+          var i = on.indexOf(v);
+          if (conf.multi) {
+            if (i > -1) on.splice(i, 1);
+            else on.push(v);
+            profile[key] = on;
+          } else {
+            profile[key] = i > -1 ? '' : v;   // もう一度押すと未選択に戻る
+          }
+          paint();
+          head();
+          save();
+        });
+        box.appendChild(b);
+      });
+      paint();
+    });
+
+    head();
+    // すでに登録済みなら閉じたままにして、一覧の邪魔をしない
+    fold.open = !hairSummary(profile).length;
   }
 
   /* ---------------- 詳細 ---------------- */
@@ -1396,9 +1499,7 @@
     mount('tpl-say');
     var root = main;
 
-    root.querySelector('[data-f="title"]').textContent = o.name || o.styleName || '髪型の注文';
-    root.querySelector('[data-f="sub"]').textContent =
-      [o.name ? o.styleName : '', o.lengthGenre].filter(Boolean).join('　・　');
+    drawShowHead(root, o);
 
     var lines = sayLines(o);
     var list = root.querySelector('[data-f="lines"]');
@@ -1450,10 +1551,7 @@
     mount('tpl-show');
     var root = main;
 
-    root.querySelector('[data-f="title"]').textContent =
-      o.name || o.styleName || '髪型の注文';
-    root.querySelector('[data-f="sub"]').textContent =
-      [o.name ? o.styleName : '', o.lengthGenre].filter(Boolean).join('　・　');
+    drawShowHead(root, o);
 
     // 見せる画面では、指定していない部位は出さない（読む側の迷いを減らす）
     HeadMap.render(root.querySelector('#show-headmap'), o, { editable: false, hideEmpty: true });
@@ -1484,6 +1582,29 @@
 
     drawShowPhotos(root, o);
     setupShowBar(root, id, 'show');
+  }
+
+  /**
+   * 見せる・伝えるの見出し。
+   * 美容師さんがまず知りたいのはヘアスタイル名なので、それを主役に置く。
+   * シートの名前（「いつもの◯◯」など）は自分用の目印なので、
+   * スタイル名と重ならないときだけ小さく添える。
+   */
+  function drawShowHead(root, o) {
+    var style = (o.styleName || '').trim();
+    var name = (o.name || '').trim();
+
+    root.querySelector('[data-f="eyebrow"]').hidden = !style;
+    root.querySelector('[data-f="title"]').textContent = style || name || '髪型の注文';
+
+    var chips = root.querySelector('[data-f="chips"]');
+    chips.hidden = !o.lengthGenre;
+    chips.innerHTML = o.lengthGenre ? '<span class="showchip">' + esc(o.lengthGenre) + '</span>' : '';
+
+    var sub = root.querySelector('[data-f="sub"]');
+    var extra = (style && name && name.indexOf(style) < 0) ? name : '';
+    sub.hidden = !extra;
+    sub.textContent = extra;
   }
 
   /**
@@ -2215,7 +2336,7 @@
     });
 
     main.querySelector('[data-action="wipe"]').addEventListener('click', function () {
-      if (!confirm('すべてのカルテ・注文シート・スタイリング剤・写真を削除します。元に戻せません。よろしいですか？')) return;
+      if (!confirm('すべてのカルテ・注文シート・スタイリング剤・髪質・写真を削除します。元に戻せません。よろしいですか？')) return;
       if (!confirm('本当に削除しますか？')) return;
       DB.clearAll().then(reload).then(function () {
         toast('すべてのデータを削除しました');
@@ -2231,6 +2352,7 @@
       ['カルテ', state.records.length + '件'],
       ['注文シート', state.sheets.length + '件'],
       ['スタイリング剤', state.products.length + '件'],
+      ['髪質', hairSummary(state.profile).length ? '登録済み' : '未登録'],
       ['写真', state.photos.length + '枚'],
       ['写真の容量', (photoBytes / 1048576).toFixed(1) + ' MB']
     ];
@@ -2265,11 +2387,12 @@
     })).then(function (photos) {
       var payload = {
         app: 'hair_karte',
-        version: 3,
+        version: 4,
         exportedAt: new Date().toISOString(),
         records: state.records,
         sheets: state.sheets,
         products: state.products,
+        profile: state.profile,
         photos: photos
       };
       var blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
@@ -2320,6 +2443,7 @@
       Promise.all(data.records.map(function (r) { return DB.putRecord(r); }))
         .then(function () { return Promise.all(sheets.map(function (sh) { return DB.putSheet(sh); })); })
         .then(function () { return Promise.all(products.map(function (pr) { return DB.putProduct(pr); })); })
+        .then(function () { return data.profile ? DB.putProfile(data.profile) : null; })
         .then(function () { return DB.putPhotos(photos); })
         .then(reload)
         .then(function () {
