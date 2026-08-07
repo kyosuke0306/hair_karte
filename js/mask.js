@@ -133,10 +133,11 @@
     canvas.height = st.source.height;
     canvas.getContext('2d').drawImage(st.source, 0, 0);
 
-    var native = nativeDetect(canvas);
-    return native.then(function (boxes) {
-      if (boxes && boxes.length) return { boxes: boxes, native: true };
-      return { boxes: skinDetect(canvas), native: false };
+    // 肌色マップは、内蔵検出があるときも「髪を外す」ために使う
+    var sm = skinMap(canvas);
+    return nativeDetect(canvas).then(function (boxes) {
+      if (boxes && boxes.length) return { boxes: boxes, native: true, skin: sm };
+      return { boxes: skinBoxes(sm), native: false, skin: sm };
     });
   }
 
@@ -156,12 +157,8 @@
     }
   }
 
-  /**
-   * 内蔵検出が無い端末向けの簡易検出。
-   * 肌色っぽい画素のかたまりを探し、顔らしい大きさ・縦横比のものを返す。
-   * 誤検出もあるので、結果はそのまま焼き込まず必ずユーザーが確認する。
-   */
-  function skinDetect(canvas) {
+  /** 縮小した画像の「肌色かどうか」を1枚のマップにする */
+  function skinMap(canvas) {
     var W = 128;
     var scale = W / canvas.width;
     var H = Math.max(1, Math.round(canvas.height * scale));
@@ -175,7 +172,16 @@
     for (var i = 0, p = 0; i < skin.length; i++, p += 4) {
       if (isSkin(data[p], data[p + 1], data[p + 2])) skin[i] = 1;
     }
-    skin = close3x3(skin, W, H);
+    return { W: W, H: H, map: close3x3(skin, W, H) };
+  }
+
+  /**
+   * 内蔵検出が無い端末向けの簡易検出。
+   * 肌色っぽい画素のかたまりを探し、顔らしい大きさ・縦横比のものを返す。
+   * 誤検出もあるので、結果はそのまま焼き込まず必ずユーザーが確認する。
+   */
+  function skinBoxes(sm) {
+    var W = sm.W, H = sm.H, skin = sm.map;
 
     // 連結成分をラベリング
     var seen = new Uint8Array(W * H);
@@ -220,11 +226,81 @@
 
     return boxes.sort(function (a, b) { return b.area - a.area; })
       .slice(0, 5)
-      .map(function (b) {
-        // 髪や輪郭も入るよう少し広げる
-        var ex = b.w * 0.22, ey = b.h * 0.24;
-        return normBox(b.x - ex, b.y - ey, b.w + ex * 2, b.h + ey * 2, W, H);
-      });
+      .map(function (b) { return normBox(b.x, b.y, b.w, b.h, W, H); });
+  }
+
+  /**
+   * 検出した枠を、肌が写っている範囲まで縮める。
+   * 髪は肌色ではないので、これだけで髪はマスクの外に出る。
+   * 端に紛れ込んだ点に引っぱられないよう、行・列ごとの肌色の量で判断する。
+   * 肌色が十分に見つからないときは null を返し、呼び出し側で元の枠を使う。
+   */
+  function tightenToSkin(b, sm) {
+    if (!sm) return null;
+    var W = sm.W, H = sm.H, map = sm.map;
+    var x0 = Math.max(0, Math.floor(b.x * W));
+    var x1 = Math.min(W, Math.ceil((b.x + b.w) * W));
+    var y0 = Math.max(0, Math.floor(b.y * H));
+    var y1 = Math.min(H, Math.ceil((b.y + b.h) * H));
+    if (x1 - x0 < 4 || y1 - y0 < 4) return null;
+
+    var cols = new Uint16Array(x1 - x0);
+    var rows = new Uint16Array(y1 - y0);
+    var total = 0;
+    for (var y = y0; y < y1; y++) {
+      for (var x = x0; x < x1; x++) {
+        if (!map[y * W + x]) continue;
+        cols[x - x0]++;
+        rows[y - y0]++;
+        total++;
+      }
+    }
+    if (total < (x1 - x0) * (y1 - y0) * 0.12) return null;   // 肌がほとんど無い
+
+    function span(counts) {
+      var max = 0, i;
+      for (i = 0; i < counts.length; i++) if (counts[i] > max) max = counts[i];
+      var th = Math.max(1, max * 0.25);
+      var lo = -1, hi = -1;
+      for (i = 0; i < counts.length; i++) {
+        if (counts[i] < th) continue;
+        if (lo < 0) lo = i;
+        hi = i;
+      }
+      return lo < 0 ? null : { lo: lo, hi: hi + 1 };
+    }
+
+    var cs = span(cols), rs = span(rows);
+    if (!cs || !rs || cs.hi - cs.lo < 3 || rs.hi - rs.lo < 3) return null;
+
+    return {
+      x: (x0 + cs.lo) / W,
+      y: (y0 + rs.lo) / H,
+      w: (cs.hi - cs.lo) / W,
+      h: (rs.hi - rs.lo) / H
+    };
+  }
+
+  /**
+   * 顔の枠を、髪がかからない範囲（目・鼻・口のあたり）に縮める。
+   * このアプリでは髪型が主役なので、額や生えぎわ・耳まわりの髪は隠さない。
+   *
+   * 肌の範囲まで絞れたときは髪が入っていないので、少し内側に入れるだけにする。
+   * 絞れなかったときは、内蔵検出の枠が生えぎわからあごまでを含む前提で大きめに削る。
+   */
+  var FEATURE = {
+    loose: { top: 0.30, bottom: 0.94, side: 0.17 },
+    skin: { top: 0.10, bottom: 0.99, side: 0.05 }
+  };
+
+  function featureBox(b, tightened) {
+    var f = tightened ? FEATURE.skin : FEATURE.loose;
+    return {
+      x: b.x + b.w * f.side,
+      y: b.y + b.h * f.top,
+      w: b.w * (1 - f.side * 2),
+      h: b.h * (f.bottom - f.top)
+    };
   }
 
   function isSkin(r, g, b) {
@@ -460,14 +536,18 @@
 
     detect().then(function (res) {
       var added = 0;
-      res.boxes.forEach(function (b) {
+      res.boxes.forEach(function (raw) {
+        // まず肌の範囲まで縮めてから、目から口のあたりに絞る
+        var tight = tightenToSkin(raw, res.skin);
+        var b = featureBox(tight || raw, !!tight);
         if (b.w < 0.02 || b.h < 0.02) return;
         st.masks.push({ x: b.x, y: b.y, w: b.w, h: b.h, shape: st.shape, style: st.style });
         added++;
       });
       drawPreview();
       el.hint.textContent = added
-        ? added + 'か所を検出しました。ずれていたらタップで消して、指でなぞり直してください。'
+        ? added + 'か所を検出しました。髪型が隠れないよう、目から口のあたりだけを隠します。' +
+          'ずれていたらタップで消して、指でなぞり直してください。'
         : '顔を自動で見つけられませんでした。隠したい場所を指でなぞってください。';
     }).catch(function (err) {
       console.error(err);
@@ -503,7 +583,7 @@
     st.onApply = onApply;
     el.apply.disabled = false;
     el.apply.textContent = '適用';
-    el.hint.textContent = '隠したい場所を指でなぞってください。タップでも置けます（置いた場所をタップすると消えます）。';
+    el.hint.textContent = '「自動で顔を検出して隠す」は、髪型が隠れないよう目から口のあたりだけを隠します。指でなぞって足すこともできます（置いた場所をタップすると消えます）。';
 
     return loadSource(photo.full || photo.thumb).then(function (src) {
       st.source = src;
