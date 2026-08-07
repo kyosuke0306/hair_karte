@@ -744,17 +744,42 @@
       </fieldset>
 
       <fieldset class="fs">
-        <legend class="fs__legend">メモ</legend>
-        <div class="grid">
-          <label class="field field--wide">
-            <span class="field__label">使ってみた感じ・勧められた理由</span>
-            <textarea class="input" name="note" rows="3" placeholder="例）ツヤは控えめ。夕方までキープできる／田中さんに「もう少しセット力が強いものを」と勧められた"></textarea>
-          </label>
-          <label class="field">
-            <span class="field__label">教えてくれた人</span>
-            <input class="input" type="text" name="fromWhom" list="dl-stylist" placeholder="例）田中さん">
-          </label>
+        <legend class="fs__legend">使い心地</legend>
+
+        <input type="hidden" name="hold">
+        <input type="hidden" name="shine">
+        <input type="hidden" name="feels">
+
+        <div class="pickrow">
+          <span class="field__label">セット力</span>
+          <div class="tagrow" data-f="hold"></div>
         </div>
+        <div class="pickrow">
+          <span class="field__label">ツヤ感</span>
+          <div class="tagrow" data-f="shine"></div>
+        </div>
+        <div class="pickrow">
+          <span class="field__label">使ってみて（いくつでも）</span>
+          <div class="tagrow" data-f="feels"></div>
+        </div>
+        <p class="hint">押すだけで選べます。もう一度押すと外れます。</p>
+
+        <details class="foldout">
+          <summary class="foldout__head">ことばでもメモを書く</summary>
+          <label class="field field--wide">
+            <span class="field__label">メモ</span>
+            <textarea class="input" name="note" rows="3" placeholder="例）田中さんに「もう少しセット力が強いものを」と勧められた"></textarea>
+          </label>
+        </details>
+      </fieldset>
+
+      <fieldset class="fs">
+        <legend class="fs__legend">教えてくれた人</legend>
+        <div class="tagrow" data-f="whom"></div>
+        <label class="field">
+          <span class="field__label">名前</span>
+          <input class="input" type="text" name="fromWhom" list="dl-stylist" placeholder="例）田中さん">
+        </label>
       </fieldset>
 
       <div class="form-foot">
@@ -796,8 +821,10 @@
         <legend class="fs__legend">シートの名前</legend>
         <label class="field">
           <span class="field__label">名前 <b class="req">必須</b></span>
-          <input class="input" type="text" name="name" required placeholder="例）いつもの short">
+          <input class="input" type="text" name="name" required placeholder="例）いつものマッシュショート">
         </label>
+        <div class="tagrow tagrow--adj" data-f="adjs" role="group" aria-label="名前の頭に付ける言葉"></div>
+        <p class="hint">ヘアスタイルを選ぶと「いつもの◯◯」が自動で入ります。上の言葉を押すと言い換えられます。自由に書き換えても、消してもかまいません。</p>
       </fieldset>
 
       <div data-slot="order-fields"></div>

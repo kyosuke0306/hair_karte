@@ -1183,6 +1183,70 @@
     });
   }
 
+  /* 名前の頭に付ける言葉。ヘアスタイル名にそのままつながる形にしてある */
+  var NAME_ADJECTIVES = ['いつもの', '夏の', '冬の', '短めの', '長めの', 'きちんとした'];
+
+  /**
+   * 注文シートの名前を自動で埋める。
+   * 毎回タイプするのは面倒なので「いつもの◯◯」を既定にし、
+   * 頭の言葉だけ押して替えられるようにする。自分で書き換えたらもう触らない。
+   * @param {boolean} auto 最初から自動で入れてよいか（新規のときだけ true）
+   */
+  function setupSheetName(form, auto) {
+    var nameEl = form.elements.name;
+    var box = form.querySelector('[data-f="adjs"]');
+    if (!nameEl || !box) return;
+    var adj = NAME_ADJECTIVES[0];
+
+    function styleName() {
+      return (form.elements.styleName ? form.elements.styleName.value : '').trim();
+    }
+
+    function paint() {
+      box.querySelectorAll('.tag').forEach(function (b) {
+        b.classList.toggle('is-on', auto && b.dataset.adj === adj);
+      });
+    }
+
+    function apply() {
+      if (!auto) return;
+      var st = styleName();
+      nameEl.value = st ? adj + st : adj;
+      paint();
+    }
+
+    NAME_ADJECTIVES.forEach(function (a) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tag';
+      b.dataset.adj = a;
+      b.textContent = a;
+      b.addEventListener('click', function () {
+        adj = a;
+        auto = true;      // 押したときは自動で入れ直してよい合図
+        apply();
+      });
+      box.appendChild(b);
+    });
+
+    // 自分で書き換えたら手を出さない。空にしたら、また自動で入れてよい
+    nameEl.addEventListener('input', function () {
+      auto = !nameEl.value.trim();
+      paint();
+    });
+
+    // ヘアスタイルを選んだら名前も追いかける
+    if (form.elements.styleSelect) {
+      form.elements.styleSelect.addEventListener('change', apply);
+    }
+    if (form.elements.styleName) {
+      form.elements.styleName.addEventListener('input', apply);
+    }
+
+    if (auto && styleName()) apply();
+    paint();
+  }
+
   /** 部位図と hidden input を同期させる */
   function setupHeadMap(form) {
     var box = form.querySelector('#form-headmap');
@@ -1476,6 +1540,7 @@
           '<div class="card__body">' +
             '<h4 class="card__style">' + esc(p.name || '（名前なし）') + '</h4>' +
             (sub ? '<p class="card__salon">' + esc(sub) + '</p>' : '') +
+            productTags(p) +
             (p.note ? '<p class="card__note">' + esc(p.note) + '</p>' : '') +
             (p.fromWhom ? '<p class="card__from">' + esc(p.fromWhom) + 'に教わった</p>' : '') +
           '</div>' +
@@ -1483,6 +1548,18 @@
         wrap.appendChild(card);
       });
     });
+  }
+
+  /** 一覧に出す、使い心地のチップ */
+  function productTags(p) {
+    var tags = [];
+    if (p.hold) tags.push('セット力 ' + p.hold);
+    if (p.shine) tags.push(p.shine);
+    (p.feels || []).forEach(function (f) { tags.push(f); });
+    if (!tags.length) return '';
+    return '<div class="chips">' + tags.map(function (t) {
+      return '<span class="chip">' + esc(t) + '</span>';
+    }).join('') + '</div>';
   }
 
   function renderProductForm(editId) {
@@ -1506,11 +1583,18 @@
     var photoBox = setupPhotos(form, editId, null);
 
     if (base) {
-      ['name', 'brand', 'type', 'note', 'fromWhom', 'source', 'kind'].forEach(function (k) {
+      ['name', 'brand', 'type', 'note', 'fromWhom', 'source', 'kind', 'hold', 'shine'].forEach(function (k) {
         if (form.elements[k]) form.elements[k].value = base[k] == null ? '' : base[k];
       });
+      form.elements.feels.value = (base.feels || []).join('\n');
       form.querySelector('[data-action="delete-product"]').hidden = false;
     }
+
+    // 使い心地は書かずに押すだけで決められるようにする
+    setupTags(form, 'hold', Products.HOLD, false);
+    setupTags(form, 'shine', Products.SHINE, false);
+    setupTags(form, 'feels', Products.FEELS, true);
+    setupWhomTags(form);
     if (!form.elements.kind.value) form.elements.kind.value = 'using';
 
     function paintKind() {
@@ -1593,6 +1677,9 @@
         brand: form.elements.brand.value.trim(),
         type: form.elements.type.value,
         note: form.elements.note.value.trim(),
+        hold: form.elements.hold.value,
+        shine: form.elements.shine.value,
+        feels: form.elements.feels.value ? form.elements.feels.value.split('\n') : [],
         fromWhom: form.elements.fromWhom.value.trim(),
         source: form.elements.source.value.trim(),
         createdAt: base ? base.createdAt : Date.now(),
@@ -1612,6 +1699,85 @@
           toast('保存できませんでした：' + (err && err.name === 'QuotaExceededError' ? '端末の空き容量が足りません' : 'エラーが発生しました'));
         });
     });
+  }
+
+  /**
+   * 押すだけで選べるタグ。値は hidden input に入れる。
+   * multi のときは改行区切りで複数持つ（もう一度押すと外れる）。
+   */
+  function setupTags(form, field, options, multi) {
+    var box = form.querySelector('[data-f="' + field + '"]');
+    var input = form.elements[field];
+    if (!box || !input) return;
+
+    function chosen() {
+      return input.value ? input.value.split('\n') : [];
+    }
+
+    function paint() {
+      var on = chosen();
+      box.querySelectorAll('.tag').forEach(function (b) {
+        b.classList.toggle('is-on', on.indexOf(b.dataset.v) > -1);
+      });
+    }
+
+    box.innerHTML = '';
+    options.forEach(function (v) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tag';
+      b.dataset.v = v;
+      b.textContent = v;
+      b.addEventListener('click', function () {
+        var on = chosen();
+        var i = on.indexOf(v);
+        if (multi) {
+          if (i > -1) on.splice(i, 1);
+          else on.push(v);
+        } else {
+          on = i > -1 ? [] : [v];   // もう一度押すと未選択に戻せる
+        }
+        input.value = on.join('\n');
+        paint();
+      });
+      box.appendChild(b);
+    });
+    paint();
+  }
+
+  /** 教えてくれた人も、覚えのある名前は押すだけで入るようにする */
+  function setupWhomTags(form) {
+    var box = form.querySelector('[data-f="whom"]');
+    var input = form.elements.fromWhom;
+    if (!box || !input) return;
+
+    var whom = {};
+    state.records.forEach(function (r) { if (r.stylist) whom[r.stylist] = true; });
+    state.products.forEach(function (p) { if (p.fromWhom) whom[p.fromWhom] = true; });
+    var names = Object.keys(whom).slice(0, 8);
+
+    box.innerHTML = '';
+    box.hidden = !names.length;
+    names.forEach(function (v) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tag';
+      b.dataset.v = v;
+      b.textContent = v;
+      b.addEventListener('click', function () {
+        input.value = input.value === v ? '' : v;
+        paint();
+      });
+      box.appendChild(b);
+    });
+
+    function paint() {
+      box.querySelectorAll('.tag').forEach(function (b) {
+        b.classList.toggle('is-on', b.dataset.v === input.value);
+      });
+    }
+    input.addEventListener('input', paint);
+    paint();
   }
 
   /** これまでに登録した商品名・ブランド・担当者を入力候補に出す */
@@ -1760,6 +1926,7 @@
 
     setupHeadMap(form);
     setupStyleSelect(form);
+    setupSheetName(form, !base || !base.name);   // 名前は入力が面倒なので自動で埋める
     var photoBox = setupPhotos(form, editId, null);
 
     form.querySelector('[data-action="cancel"]').addEventListener('click', function () {

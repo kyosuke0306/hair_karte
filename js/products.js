@@ -15,6 +15,14 @@
     'オイル', 'スプレー', 'ムース', 'パウダー', 'その他'
   ];
 
+  /** 使い心地は選ぶだけで済むようにする（毎回書くのは面倒なので） */
+  var HOLD = ['弱め', 'ふつう', '強め'];
+  var SHINE = ['マット（ツヤなし）', '自然なツヤ', 'しっかりツヤ'];
+  var FEELS = [
+    '伸ばしやすい', '髪になじむ', 'キープ力がある', '夕方まで持つ', 'ベタつかない',
+    '洗い落としやすい', '香りが好き', '香りが強い', '重たくなる', '夕方に落ちる'
+  ];
+
   function imageSearch(q, site) {
     return 'https://www.google.com/search?tbm=isch&q=' +
       encodeURIComponent(q + (site ? ' site:' + site : ''));
@@ -72,6 +80,9 @@
 
   window.Products = {
     TYPES: TYPES,
+    HOLD: HOLD,
+    SHINE: SHINE,
+    FEELS: FEELS,
     SITES: SITES,
     query: query
   };

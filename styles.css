@@ -509,6 +509,29 @@ body.is-showing .main { max-width: 720px; padding: 0; }
 .card__note { font-size: 12px; color: var(--text-muted); margin-top: 4px; overflow-wrap: anywhere; }
 .card__from { font-size: 11px; color: var(--accent); margin-top: 4px; }
 
+/* 押すだけで選べるタグ */
+.tagrow { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.tag {
+  appearance: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 7px 13px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+
+.tag.is-on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
+.tagrow--adj { margin-top: 8px; }
+.pickrow + .pickrow { margin-top: 14px; }
+.pickrow .field__label { display: block; margin-bottom: 6px; }
+.fs .foldout { margin-top: 16px; }
+
 .kinds { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
 .kind {
