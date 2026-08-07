@@ -1391,7 +1391,8 @@
     root.querySelector('[data-f="sub"]').textContent =
       [o.name ? o.styleName : '', o.lengthGenre].filter(Boolean).join('　・　');
 
-    HeadMap.render(root.querySelector('#show-headmap'), o, { editable: false });
+    // 見せる画面では、指定していない部位は出さない（読む側の迷いを減らす）
+    HeadMap.render(root.querySelector('#show-headmap'), o, { editable: false, hideEmpty: true });
 
     // 美容師さんが順に読める並びにする
     var rows = [

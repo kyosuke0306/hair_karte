@@ -3,41 +3,97 @@
 (function (global) {
   'use strict';
 
+  /* ミリ数から受ける印象。バリカンの番手のおおよその見え方を言葉にする */
+  function clipperLook(n) {
+    if (n === 0) return '刈り上げずに残します。落ち着いた印象';
+    if (n <= 1.5) return '地肌がはっきり見えます。かなり短く、きりっとした印象';
+    if (n <= 3.5) return '地肌がうっすら見えます。すっきり短い印象';
+    if (n <= 6.5) return '青みが残る定番の短さ。清潔感のある印象';
+    if (n <= 9.5) return '刈り上げすぎない短さ。落ち着いた自然な印象';
+    if (n <= 12.5) return '刈り上げ感は控えめ。ナチュラルな印象';
+    return '刈り上げというより短めに整える程度。段差はほとんど出ません';
+  }
+
+  /** 決まった言い方に対する印象。無ければ空文字 */
+  function fromTable(table) {
+    return function (value) { return table[value] || ''; };
+  }
+
   /* 部位の定義。key は既存のレコードの項目名と一致させる。 */
   var ZONES = {
     topLen: {
       label: 'トップ',
       unit: 'cm', min: 0, max: 15, step: 0.5, zeroLabel: '',
       suggest: ['短めに', '3cm', '5cm', '7cm', '指2本分', '長めに残す'],
-      hint: '頭頂部の長さ'
+      hint: '頭頂部の長さ',
+      look: function (value, n) {
+        if (n == null) return fromTable({
+          '短めに': 'すっきりして、手入れが楽な印象',
+          '指2本分': '定番の長さ。ワックスで束感を出しやすい',
+          '長めに残す': 'ボリュームを出しやすい反面、重く見えることも'
+        })(value);
+        if (n <= 2) return 'かなり短く、動きは出しにくい。すっきりした印象';
+        if (n <= 4) return '短め。軽い動きが出せる長さ';
+        if (n <= 6) return '定番の長さ。ワックスで束感を出しやすい';
+        if (n <= 9) return 'やや長め。流したりボリュームを出したりしやすい';
+        return '長め。まとまりは出ますが少し重く見えます';
+      }
     },
     frontLen: {
       label: '前髪',
       suggest: ['眉上', '眉が半分隠れる', '眉が隠れる', '目にかかる', '流せる長さ', '長め'],
-      hint: 'どこまでの長さにするか'
+      hint: 'どこまでの長さにするか',
+      look: fromTable({
+        '眉上': 'おでこが出て、明るく元気な印象',
+        '眉が半分隠れる': '重すぎず軽すぎない、いちばん無難な印象',
+        '眉が隠れる': '落ち着いた、やわらかい印象',
+        '目にかかる': '目もとが隠れて雰囲気は出ますが、伸びると邪魔になりやすい',
+        '流せる長さ': '横に流せて、大人っぽい印象',
+        '長め': '重めで落ち着いた印象。分けたりかき上げたりできます'
+      })
     },
     sideMm: {
       label: 'サイド',
       unit: 'mm', min: 0, max: 20, step: 0.5, zeroLabel: '刈り上げなし',
       suggest: ['刈り上げなし', '3mm', '6mm', '9mm', '12mm'],
-      hint: 'バリカンのミリ数'
+      hint: 'バリカンのミリ数',
+      look: function (value, n) { return n == null ? '' : clipperLook(n); }
     },
     sideburnMm: {
       label: 'もみあげ',
       unit: 'mm', min: 0, max: 20, step: 0.5, zeroLabel: '刈り上げなし',
       suggest: ['刈り上げなし', '自然に残す', '3mm', '6mm', '9mm'],
-      hint: 'バリカンのミリ数・形'
+      hint: 'バリカンのミリ数・形',
+      look: function (value, n) {
+        if (n == null) return value === '自然に残す' ? '手を入れすぎず、やわらかい印象' : '';
+        if (n === 0) return '刈り上げずに残します。落ち着いた印象';
+        if (n <= 3.5) return '細く短く整えて、きりっとした印象';
+        return clipperLook(n);
+      }
     },
     backMm: {
       label: 'バック',
       unit: 'mm', min: 0, max: 20, step: 0.5, zeroLabel: '刈り上げなし',
       suggest: ['刈り上げなし', '3mm', '6mm', '9mm', '3mm→9mmグラデ'],
-      hint: '襟足までのミリ数'
+      hint: '襟足までのミリ数',
+      look: function (value, n) {
+        if (n == null) {
+          return /グラデ/.test(String(value)) ? '下から上へ自然につながる、なじみのよい印象' : '';
+        }
+        return clipperLook(n);
+      }
     },
     fadeHeight: {
       label: '刈り上げの高さ',
       suggest: ['耳の高さまで', '耳の上まで', 'こめかみまで', 'ハチ下まで', '後頭部の丸みまで'],
-      hint: 'どこまで刈り上げるか'
+      hint: 'どこまで刈り上げるか',
+      look: fromTable({
+        '耳の高さまで': '刈り上げは低め。控えめで自然な印象',
+        '耳の上まで': '定番の高さ。すっきりしつつ落ち着いた印象',
+        'こめかみまで': 'やや高め。輪郭がはっきり出てシャープな印象',
+        'ハチ下まで': '高め。かなりすっきりした印象',
+        '後頭部の丸みまで': 'いちばん高い位置まで。ツーブロック感が強い印象'
+      })
     }
   };
 
@@ -85,7 +141,9 @@
     });
   }
 
-  function group(zone, inner, value) {
+  /** opts.hideEmpty のときは、指定していない部位をまるごと描かない */
+  function group(zone, inner, value, o) {
+    if (o && o.hideEmpty && !value) return '';
     return '<g class="hmz' + (value ? ' is-set' : '') + '" data-zone="' + zone + '" tabindex="0" ' +
       'role="button" aria-label="' + esc(ZONES[zone].label + ' ' + (value || '未設定')) + '">' +
       '<title>' + esc(ZONES[zone].label + '：' + (value || '未設定')) + '</title>' +
@@ -94,7 +152,7 @@
 
   /* ---------------- 正面 ---------------- */
 
-  function frontSVG(v) {
+  function frontSVG(v, o) {
     return '<svg class="hm__svg" viewBox="0 0 360 244" role="img" aria-label="正面から見た髪型の指定">' +
       '<g class="hm__body">' +
         '<path class="hm-cloth" d="M116 244 C122 208 150 196 180 196 C210 196 238 208 244 244 Z"/>' +
@@ -116,28 +174,28 @@
       group('topLen',
         bands('topLen', ['M145 62 C152 44 208 44 215 62']) +
         callout('topLen', 'M206 50 L244 40 L258 40', 262, 40, 'start', v.topLen),
-        v.topLen) +
+        v.topLen, o) +
 
       group('frontLen',
         bands('frontLen', ['M152 88 C164 104 196 104 208 88']) +
         callout('frontLen', 'M158 98 L112 84 L98 84', 94, 84, 'end', v.frontLen),
-        v.frontLen) +
+        v.frontLen, o) +
 
       group('sideMm',
         bands('sideMm', ['M137 104 C134 122 135 136 140 150', 'M223 104 C226 122 225 136 220 150']) +
         callout('sideMm', 'M136 126 L112 130 L98 130', 94, 130, 'end', v.sideMm),
-        v.sideMm) +
+        v.sideMm, o) +
 
       group('sideburnMm',
         bands('sideburnMm', ['M146 146 L152 164', 'M214 146 L208 164']) +
         callout('sideburnMm', 'M212 156 L246 174 L258 174', 262, 174, 'start', v.sideburnMm),
-        v.sideburnMm) +
+        v.sideburnMm, o) +
     '</svg>';
   }
 
   /* ---------------- 横向き（左を向いた状態） ---------------- */
 
-  function sideSVG(v) {
+  function sideSVG(v, o) {
     return '<svg class="hm__svg" viewBox="0 0 360 244" role="img" aria-label="横から見た髪型の指定">' +
       '<g class="hm__body">' +
         '<path class="hm-cloth" d="M116 244 C122 208 150 196 180 196 C210 196 238 208 244 244 Z"/>' +
@@ -154,12 +212,12 @@
       group('backMm',
         bands('backMm', ['M227 104 C225 130 221 146 215 156']) +
         callout('backMm', 'M226 124 L248 100 L258 100', 262, 100, 'start', v.backMm),
-        v.backMm) +
+        v.backMm, o) +
 
       group('fadeHeight',
         bands('fadeHeight', ['M152 132 L216 132'], 'line') +
         callout('fadeHeight', 'M154 132 L112 156 L98 156', 94, 156, 'end', v.fadeHeight),
-        v.fadeHeight) +
+        v.fadeHeight, o) +
     '</svg>';
   }
 
@@ -169,6 +227,7 @@
    * container に部位図を描く。
    * values: レコード（sideMm などを持つオブジェクト）
    * opts.editable: true なら部位をタップして値を選べる
+   * opts.hideEmpty: true なら指定していない部位を描かない（見せる画面で使う）
    * opts.onChange(key, value): 値が変わったときに呼ばれる
    */
   function render(container, values, opts) {
@@ -177,8 +236,8 @@
 
     container.className = 'headmap' + (opts.editable ? ' headmap--edit' : '');
     container.innerHTML =
-      '<div class="hm"><div class="hm__caption">正面</div>' + frontSVG(v) + '</div>' +
-      '<div class="hm"><div class="hm__caption">横・後ろ</div>' + sideSVG(v) + '</div>';
+      '<div class="hm"><div class="hm__caption">正面</div>' + frontSVG(v, opts) + '</div>' +
+      '<div class="hm"><div class="hm__caption">横・後ろ</div>' + sideSVG(v, opts) + '</div>';
 
     if (!opts.editable) return;
 
@@ -263,6 +322,8 @@
           '<div class="numpick__scale"><span data-f="scalemin"></span><span data-f="scalemax"></span></div>' +
         '</div>' +
 
+        '<p class="lookline" data-f="look" hidden></p>' +
+
         '<label class="field">' +
           '<span class="field__label">自由に入力</span>' +
           '<input class="input" type="text" data-f="free" list="sheet-suggest">' +
@@ -291,6 +352,10 @@
       applyNumber(Number(this.value));
     });
 
+    sheet.querySelector('[data-f="free"]').addEventListener('input', function () {
+      drawLook(this.value.trim());
+    });
+
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && !sheet.hidden) close();
     });
@@ -315,6 +380,24 @@
     sheet.querySelector('[data-f="numval"]').textContent = (n === 0 && zero) ? zero : trimNum(n);
     sheet.querySelector('[data-f="numunit"]').textContent = (n === 0 && zero) ? '' : current.unit;
     sheet.querySelector('[data-f="free"]').value = text;
+    drawLook(text);
+  }
+
+  /**
+   * 選んだ値がどんな見え方になるかを出す。
+   * 数字だけ見ても仕上がりが想像しにくいので、言葉を添えて選びやすくする。
+   */
+  function lookOf(value) {
+    if (!current || !current.look || !value) return '';
+    var n = current.unit ? parseNumber(value, current.unit, current.zeroLabel) : null;
+    return current.look(value, n) || '';
+  }
+
+  function drawLook(value) {
+    var el = sheet.querySelector('[data-f="look"]');
+    var text = lookOf(value);
+    el.hidden = !text;
+    el.textContent = text;
   }
 
   function trimNum(n) {
@@ -373,14 +456,24 @@
     sheet.querySelector('[data-f="histlabel"]').textContent =
       opts.historyLabel || (opts.unit === 'mm' ? 'よく使う値' : '選ぶ');
     box.innerHTML = '';
+    var rich = false;
     choices.forEach(function (p) {
       var b = document.createElement('button');
       b.type = 'button';
       b.className = 'preset' + (p === opts.current ? ' is-on' : '');
-      b.textContent = p;
+      // 押した瞬間に決まってしまうので、印象はボタンの中に書いておく
+      var look = lookOf(p);
+      if (look) {
+        rich = true;
+        b.classList.add('preset--rich');
+        b.innerHTML = '<b>' + esc(p) + '</b><span>' + esc(look) + '</span>';
+      } else {
+        b.textContent = p;
+      }
       b.addEventListener('click', function () { finish(p); });
       box.appendChild(b);
     });
+    box.classList.toggle('sheet__presets--rich', rich);
     block.hidden = choices.length === 0;
 
     // 数値で選べる部位はスライダーを出す
@@ -405,6 +498,7 @@
       num.hidden = true;
     }
 
+    drawLook(free.value.trim());
     sheet.hidden = false;
   }
 
@@ -437,6 +531,7 @@
       max: z.max,
       step: z.step,
       zeroLabel: z.zeroLabel,
+      look: z.look,
       onPick: cb
     });
   }
