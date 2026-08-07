@@ -1745,7 +1745,11 @@
     paint();
   }
 
-  /** 教えてくれた人も、覚えのある名前は押すだけで入るようにする */
+  /**
+   * 教えてくれた人は押すだけで選ぶ（名前をタイプさせない）。
+   * 候補はカルテの担当スタイリストと、これまでの登録から集める。
+   * 候補が1つも無いときは、この欄ごと出さない。
+   */
   function setupWhomTags(form) {
     var box = form.querySelector('[data-f="whom"]');
     var input = form.elements.fromWhom;
@@ -1754,10 +1758,14 @@
     var whom = {};
     state.records.forEach(function (r) { if (r.stylist) whom[r.stylist] = true; });
     state.products.forEach(function (p) { if (p.fromWhom) whom[p.fromWhom] = true; });
+    // 編集中の値が候補に無いこともあるので足しておく
+    if (input.value) whom[input.value] = true;
     var names = Object.keys(whom).slice(0, 8);
 
+    var fs = box.closest('.fs');
+    if (fs) fs.hidden = !names.length;
+
     box.innerHTML = '';
-    box.hidden = !names.length;
     names.forEach(function (v) {
       var b = document.createElement('button');
       b.type = 'button';
@@ -1776,7 +1784,6 @@
         b.classList.toggle('is-on', b.dataset.v === input.value);
       });
     }
-    input.addEventListener('input', paint);
     paint();
   }
 
@@ -1789,25 +1796,13 @@
         return '<option value="' + esc(v) + '"></option>';
       }).join('');
     };
-    var names = {}, brands = {}, whom = {};
+    var names = {}, brands = {};
     state.products.forEach(function (p) {
       if (p.name) names[p.name] = true;
       if (p.brand) brands[p.brand] = true;
-      if (p.fromWhom) whom[p.fromWhom] = true;
     });
-    state.records.forEach(function (r) { if (r.stylist) whom[r.stylist] = true; });
     fill('dl-product', names);
     fill('dl-brand', brands);
-
-    var dl = document.getElementById('dl-stylist');
-    if (!dl) {
-      dl = document.createElement('datalist');
-      dl.id = 'dl-stylist';
-      form.appendChild(dl);
-    }
-    dl.innerHTML = Object.keys(whom).map(function (v) {
-      return '<option value="' + esc(v) + '"></option>';
-    }).join('');
   }
 
   function renderSheets() {
