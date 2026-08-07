@@ -573,7 +573,14 @@
 
       <section class="say__photos" data-f="photos" hidden>
         <h2 class="show__label">最後に写真を見せる</h2>
-        <div class="thumbs thumbs--show" data-f="photolist"></div>
+        <div class="showgroup" data-f="group-ref" hidden>
+          <h3 class="showgroup__label">こうしたい（参考の写真）</h3>
+          <div class="thumbs thumbs--show" data-f="photos-ref"></div>
+        </div>
+        <div class="showgroup" data-f="group-self" hidden>
+          <h3 class="showgroup__label">以前の自分の髪型</h3>
+          <div class="thumbs thumbs--show" data-f="photos-self"></div>
+        </div>
       </section>
 
       <div class="say__foot">
@@ -607,8 +614,15 @@
       </section>
 
       <section class="show__photos" data-f="photos" hidden>
-        <h2 class="show__label">参考の写真</h2>
-        <div class="thumbs thumbs--show" data-f="photolist"></div>
+        <h2 class="show__label">写真</h2>
+        <div class="showgroup" data-f="group-ref" hidden>
+          <h3 class="showgroup__label">こうしたい（参考の写真）</h3>
+          <div class="thumbs thumbs--show" data-f="photos-ref"></div>
+        </div>
+        <div class="showgroup" data-f="group-self" hidden>
+          <h3 class="showgroup__label">以前の自分の髪型</h3>
+          <div class="thumbs thumbs--show" data-f="photos-self"></div>
+        </div>
       </section>
     </div>
   </section>
@@ -697,11 +711,11 @@
       <section class="panel">
         <h3 class="panel__title">写真</h3>
         <div class="photogroup">
-          <h4 class="photogroup__label">参考モデル</h4>
+          <h4 class="photogroup__label">こうしたい（参考モデル）</h4>
           <div class="thumbs" data-f="photos-ref"></div>
         </div>
         <div class="photogroup">
-          <h4 class="photogroup__label">自分</h4>
+          <h4 class="photogroup__label">以前の自分の髪型</h4>
           <div class="thumbs" data-f="photos-self"></div>
         </div>
       </section>

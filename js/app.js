@@ -1334,11 +1334,7 @@
       count();
     }
 
-    var refs = photosOf(o.id, 'ref');
-    if (refs.length) {
-      root.querySelector('[data-f="photos"]').hidden = false;
-      drawThumbs(root.querySelector('[data-f="photolist"]'), refs, '');
-    }
+    drawShowPhotos(root, o);
 
     root.querySelector('[data-action="copy-order"]').addEventListener('click', function () {
       copyText(lines.map(function (l) { return l.text; }).join('\n') || '（内容がありません）');
@@ -1385,13 +1381,24 @@
       root.querySelector('[data-f="notetext"]').innerHTML = esc(o.orderNote).replace(/\n/g, '<br>');
     }
 
-    var refs = photosOf(o.id, 'ref');
-    if (refs.length) {
-      root.querySelector('[data-f="photos"]').hidden = false;
-      drawThumbs(root.querySelector('[data-f="photolist"]'), refs, '');
-    }
-
+    drawShowPhotos(root, o);
     setupShowBar(root, id, 'show');
+  }
+
+  /**
+   * 見せる・伝えるの画面に写真を出す。
+   * 参考モデルだけでなく、以前の自分の髪型も見てもらえるようにする。
+   */
+  function drawShowPhotos(root, o) {
+    var any = false;
+    ['ref', 'self'].forEach(function (kind) {
+      var list = photosOf(o.id, kind);
+      if (!list.length) return;
+      any = true;
+      root.querySelector('[data-f="group-' + kind + '"]').hidden = false;
+      drawThumbs(root.querySelector('[data-f="photos-' + kind + '"]'), list, '');
+    });
+    root.querySelector('[data-f="photos"]').hidden = !any;
   }
 
   /* ---------------- 注文シート ---------------- */
@@ -1459,7 +1466,7 @@
     }
 
     drawThumbs(root.querySelector('[data-f="photos-ref"]'), photosOf(sh.id, 'ref'), '参考モデルの写真はありません');
-    drawThumbs(root.querySelector('[data-f="photos-self"]'), photosOf(sh.id, 'self'), '自分の写真はありません');
+    drawThumbs(root.querySelector('[data-f="photos-self"]'), photosOf(sh.id, 'self'), '以前の自分の髪型の写真はありません');
 
     var text = orderSheet(sh);
 
@@ -1499,6 +1506,9 @@
 
     document.getElementById('sheet-form-title').textContent = editId ? '注文シートを編集' : '新しい注文シート';
     fillDatalists();
+
+    // 注文シートでの「自分の写真」は仕上がりではなく、いまの髪型を見せるためのもの
+    form.querySelector('.photo-editor[data-kind="self"] .sub').textContent = '以前の自分の髪型';
 
     if (base) {
       form.elements.name.value = base.name || '';

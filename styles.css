@@ -260,6 +260,14 @@ body.is-showing .main { max-width: 720px; padding: 0; }
 
 .show__note p { font-size: 18px; line-height: 1.75; overflow-wrap: anywhere; }
 .show__photos { margin-top: 22px; }
+.showgroup + .showgroup { margin-top: 18px; }
+
+.showgroup__label {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
 .thumbs--show .thumb { width: 150px; height: 150px; }
 .thumbs--show .photo { width: 150px; }
 .thumbs--show .photo__cap { font-size: 13px; }
