@@ -556,9 +556,7 @@
         esc(r.orderNote).replace(/\n/g, '<br>') + '</p>';
     }
 
-    drawThumbs(root.querySelector('[data-f="photos-ref"]'), photosOf(r.id, 'ref'), '参考モデルの写真はありません');
-    drawThumbs(root.querySelector('[data-f="photos-before"]'), photosOf(r.id, 'before'), '切る前の写真はありません');
-    drawThumbs(root.querySelector('[data-f="photos-self"]'), photosOf(r.id, 'self'), '仕上がりの写真はありません');
+    drawPhotoPanel(root, r.id, ['ref', 'before', 'self']);
 
     var review = [
       ['よかった点', r.good],
@@ -595,6 +593,24 @@
         go('#/list');
       });
     });
+  }
+
+  /**
+   * 詳細画面の写真。無い種類は枠ごと出さない（「ありません」を並べない）。
+   * ひとつも無ければ写真の欄そのものを出さない。
+   */
+  function drawPhotoPanel(root, ownerId, kinds) {
+    var any = false;
+    kinds.forEach(function (kind) {
+      var list = photosOf(ownerId, kind);
+      var group = root.querySelector('[data-f="group-' + kind + '"]');
+      if (!group) return;
+      group.hidden = !list.length;
+      if (!list.length) return;
+      any = true;
+      drawThumbs(root.querySelector('[data-f="photos-' + kind + '"]'), list, '');
+    });
+    root.querySelector('[data-f="photopanel"]').hidden = !any;
   }
 
   function drawThumbs(container, photos, emptyText) {
@@ -682,6 +698,12 @@
 
     document.getElementById('form-title').textContent = editId ? 'カルテを編集' : '新しいカルテ';
     fillDatalists();
+
+    // カルテの参考モデルは注文シートから自動で入るので、編集欄も案内も出さない
+    var refBox = form.querySelector('.photo-editor[data-kind="ref"]');
+    if (refBox) refBox.remove();
+    var findHint = form.querySelector('[data-f="findhint"]');
+    if (findHint) findHint.remove();
 
     // 写真は共通の処理にまかせる（参考モデルの写真は「この内容で新規」で引き継ぐ）
     var photoBox = setupPhotos(form, editId, copyFromId);
@@ -982,10 +1004,19 @@
       removed: function () { return removed; },
       /** 外から写真を足す（種類とリンクを指定できる） */
       add: function (kind, files, source) { return addFiles(kind, files, source); },
-      /** 注文シートを貼り付けたときに、参考モデルの写真を足す */
-      addRefFrom: function (srcId) {
-        var add = photosOf(srcId, 'ref').map(copyPhoto);
-        if (!add.length) return 0;
+      /** 下書きの写真を種類で取り出す（読むだけ） */
+      list: function (kind) {
+        return draft.filter(function (p) { return p.kind === kind; });
+      },
+      /**
+       * 参考モデルの写真を、注文シートのものに入れ替える。
+       * カルテの参考モデルはシート由来なので、足すのではなく差し替える。
+       * srcId が無ければ空にする（シートを外したとき）。
+       */
+      setRefFrom: function (srcId) {
+        draft.forEach(function (p) { if (p.kind === 'ref') removed.push(p.id); });
+        draft = draft.filter(function (p) { return p.kind !== 'ref'; });
+        var add = srcId ? photosOf(srcId, 'ref').map(copyPhoto) : [];
         draft = draft.concat(add);
         draw('ref');
         return add.length;
@@ -1995,8 +2026,7 @@
         esc(sh.orderNote).replace(/\n/g, '<br>') + '</p>';
     }
 
-    drawThumbs(root.querySelector('[data-f="photos-ref"]'), photosOf(sh.id, 'ref'), '参考モデルの写真はありません');
-    drawThumbs(root.querySelector('[data-f="photos-self"]'), photosOf(sh.id, 'self'), '以前の自分の髪型の写真はありません');
+    drawPhotoPanel(root, sh.id, ['ref', 'self']);
 
     var text = orderSheet(sh);
 
@@ -2141,6 +2171,11 @@
         note.innerHTML = '<h4 class="notebox__title">伝えたいこと</h4><p>' +
           esc(v.orderNote).replace(/\n/g, '<br>') + '</p>';
       }
+
+      // 参考モデルの写真はシート由来なので、ここで読むだけの形で見せる
+      var refs = photoBox ? photoBox.list('ref') : [];
+      form.querySelector('[data-f="sheetphotos"]').hidden = !refs.length;
+      if (refs.length) drawThumbs(form.querySelector('[data-f="photos-ref"]'), refs, '');
     }
 
     function apply(sh) {
@@ -2149,9 +2184,10 @@
       });
       form.elements.sheetId.value = sh.id || '';
       form.elements.sheetName.value = sh.name || '';
+      // 参考モデルの写真も入れ替える（自分の写真はこれから撮るので写さない）
+      var n = photoBox ? photoBox.setRefFrom(sh.id) : 0;
       paint();
-      // 参考モデルの写真も一緒に持ってくる（自分の写真はこれから撮るので写さない）
-      return photoBox ? photoBox.addRefFrom(sh.id) : 0;
+      return n;
     }
 
     form.querySelectorAll('[data-action="paste-sheet"]').forEach(function (b) {
@@ -2167,6 +2203,7 @@
       });
       form.elements.sheetId.value = '';
       form.elements.sheetName.value = '';
+      if (photoBox) photoBox.setRefFrom(null);   // シートの写真も一緒に外す
       paint();
     });
 

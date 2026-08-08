@@ -383,7 +383,8 @@
             </div>
           </div>
         </div>
-        <p class="hint">「モデルを探す」でヘアカタログのサイトを開けます。気に入った写真をコピーして「画像を貼り付け」で登録できます（自分で撮った写真は「画像を選ぶ / 撮影」から）。「切る前」は美容室に入る前に撮っておくと、仕上がりと見比べられます。写真ごとに「向きを選ぶ」で前・後ろ・横などを付けられ、「顔を隠す」でモザイク・ぼかし・ぬりつぶしができます。</p>
+        <p class="hint">「切る前」は美容室に入る前に撮っておくと、仕上がりと見比べられます。参考モデルの写真は、貼り付けた注文シートから自動で入ります。写真ごとに「向きを選ぶ」で前・後ろ・横などを付けられ、「顔を隠す」でモザイク・ぼかし・ぬりつぶしができます。</p>
+        <p class="hint" data-f="findhint">「モデルを探す」でヘアカタログのサイトを開けます。気に入った写真をコピーして「画像を貼り付け」で登録できます（自分で撮った写真は「画像を選ぶ / 撮影」から）。</p>
       </fieldset>
 </template>
 
@@ -433,6 +434,11 @@
           <div id="form-headmap"></div>
           <dl class="speclist speclist--extra" data-f="specs"></dl>
           <div class="notebox" data-f="orderNote" hidden></div>
+
+          <div class="photogroup" data-f="sheetphotos" hidden>
+            <h4 class="photogroup__label">参考モデル（このシートの写真）</h4>
+            <div class="thumbs" data-f="photos-ref"></div>
+          </div>
         </div>
 
         <p class="hint">髪型の注文は「注文シート」タブで作ります。ここでは、実際にお願いしたシートを選ぶだけです。貼り付けた内容はこのカルテに写しとるので、あとでシートを直してもこの記録は変わりません。</p>
@@ -926,13 +932,13 @@
         <div class="notebox" data-f="orderNote" hidden></div>
       </section>
 
-      <section class="panel">
+      <section class="panel" data-f="photopanel" hidden>
         <h3 class="panel__title">写真</h3>
-        <div class="photogroup">
+        <div class="photogroup" data-f="group-ref" hidden>
           <h4 class="photogroup__label">こうしたい（参考モデル）</h4>
           <div class="thumbs" data-f="photos-ref"></div>
         </div>
-        <div class="photogroup">
+        <div class="photogroup" data-f="group-self" hidden>
           <h4 class="photogroup__label">以前の自分の髪型</h4>
           <div class="thumbs" data-f="photos-self"></div>
         </div>
@@ -989,17 +995,17 @@
         <div class="notebox" data-f="orderNote" hidden></div>
       </section>
 
-      <section class="panel">
+      <section class="panel" data-f="photopanel" hidden>
         <h3 class="panel__title">写真</h3>
-        <div class="photogroup">
-          <h4 class="photogroup__label">参考モデル</h4>
+        <div class="photogroup" data-f="group-ref" hidden>
+          <h4 class="photogroup__label">参考モデル（注文シートから）</h4>
           <div class="thumbs" data-f="photos-ref"></div>
         </div>
-        <div class="photogroup">
+        <div class="photogroup" data-f="group-before" hidden>
           <h4 class="photogroup__label">切る前</h4>
           <div class="thumbs" data-f="photos-before"></div>
         </div>
-        <div class="photogroup">
+        <div class="photogroup" data-f="group-self" hidden>
           <h4 class="photogroup__label">切ったあと（仕上がり）</h4>
           <div class="thumbs" data-f="photos-self"></div>
         </div>
