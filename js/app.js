@@ -1095,7 +1095,13 @@
         // 店名が空のときだけ、読み取った名前で埋める
         if (info.name && !salon.value.trim()) salon.value = info.name;
         paint();
-        toast('マップの情報を取り込みました');
+        if (info.name || salon.value.trim()) {
+          toast('マップの情報を取り込みました');
+        } else {
+          // 短縮リンクからは店名が分からない。責める言い方にしない
+          toast('リンクを記録しました。お店の名前を入れてください');
+          salon.focus();
+        }
       });
     });
 
@@ -1105,6 +1111,9 @@
       lngEl.value = '';
       paint();
     });
+
+    // 行ったことのあるお店は、押すだけで名前も地図も入るようにする
+    setupSalonTags(form, paint);
 
     // 過去に紐付けたお店を選んだら、その情報を引き継ぐ
     salon.addEventListener('change', function () {
@@ -1122,6 +1131,61 @@
       if (urlEl.value) toast('前回のマップ情報を引き継ぎました');
     });
 
+    paint();
+  }
+
+  /**
+   * 行ったことのあるお店を、押すだけで選べるようにする。
+   * 店名・店舗名・地図のリンクをまとめて入れるので、2回目からは入力がいらない。
+   * 地図のリンクは短縮URLだと店名が読み取れないことがあるため、
+   * 「選ぶ」をお店の指定の主役に置いている。
+   */
+  function setupSalonTags(form, onPick) {
+    var box = form.querySelector('[data-f="salons"]');
+    var row = form.querySelector('[data-f="salonpick"]');
+    if (!box || !row) return;
+
+    // 同じ店名は1つにまとめ、地図の紐付けがあるものを優先して残す
+    var seen = {};
+    state.records.forEach(function (r) {
+      var name = (r.salon || '').trim();
+      if (!name) return;
+      var cur = seen[name];
+      if (!cur || (!cur.mapUrl && r.mapUrl)) {
+        seen[name] = { salon: name, area: r.area || '', mapUrl: r.mapUrl || '', lat: r.lat, lng: r.lng };
+      }
+    });
+    var list = Object.keys(seen).map(function (k) { return seen[k]; }).slice(0, 8);
+    row.hidden = !list.length;
+    if (!list.length) return;
+
+    function paint() {
+      box.querySelectorAll('.tag').forEach(function (b) {
+        b.classList.toggle('is-on', b.dataset.v === form.elements.salon.value.trim());
+      });
+    }
+
+    box.innerHTML = '';
+    list.forEach(function (shop) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tag';
+      b.dataset.v = shop.salon;
+      b.textContent = shop.salon + (shop.area ? '（' + shop.area + '）' : '');
+      b.addEventListener('click', function () {
+        var off = form.elements.salon.value.trim() === shop.salon;
+        form.elements.salon.value = off ? '' : shop.salon;
+        form.elements.area.value = off ? '' : shop.area;
+        form.elements.mapUrl.value = off ? '' : shop.mapUrl;
+        form.elements.lat.value = off || shop.lat == null ? '' : shop.lat;
+        form.elements.lng.value = off || shop.lng == null ? '' : shop.lng;
+        paint();
+        if (onPick) onPick();
+      });
+      box.appendChild(b);
+    });
+
+    form.elements.salon.addEventListener('input', paint);
     paint();
   }
 
@@ -1258,7 +1322,9 @@
     box.innerHTML = '<p class="mapresult__title">読み取った内容</p>' + rows.map(function (r) {
       return '<div class="mapresult__row"><dt>' + esc(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd></div>';
     }).join('') +
-      (mapInfo.name ? '' : '<p class="mapresult__note">店名は読み取れませんでした。リンクだけ記録します。</p>');
+      (mapInfo.name ? '' : '<p class="mapresult__note">このリンクには店名が入っていません' +
+        '（スマホの短縮リンクではよくあります）。リンクは記録するので、' +
+        'お店の名前は前の画面で入れてください。</p>');
   }
 
   function closeMapSheet() {
