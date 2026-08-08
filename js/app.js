@@ -155,7 +155,8 @@
   }
 
   function coverPhoto(recordId) {
-    return photosOf(recordId, 'self')[0] || photosOf(recordId, 'ref')[0] || null;
+    return photosOf(recordId, 'self')[0] || photosOf(recordId, 'before')[0] ||
+      photosOf(recordId, 'ref')[0] || null;
   }
 
   /* ---------------- 注文シート（そのまま美容師さんに見せる文章） ---------------- */
@@ -556,7 +557,8 @@
     }
 
     drawThumbs(root.querySelector('[data-f="photos-ref"]'), photosOf(r.id, 'ref'), '参考モデルの写真はありません');
-    drawThumbs(root.querySelector('[data-f="photos-self"]'), photosOf(r.id, 'self'), '自分の写真はありません');
+    drawThumbs(root.querySelector('[data-f="photos-before"]'), photosOf(r.id, 'before'), '切る前の写真はありません');
+    drawThumbs(root.querySelector('[data-f="photos-self"]'), photosOf(r.id, 'self'), '仕上がりの写真はありません');
 
     var review = [
       ['よかった点', r.good],
@@ -1612,8 +1614,13 @@
    * 参考モデルだけでなく、以前の自分の髪型も見てもらえるようにする。
    */
   function drawShowPhotos(root, o) {
+    // 注文シートは name を持つ。カルテは切った記録なので言い方を変える
+    var isSheet = o.name != null;
+    root.querySelector('[data-f="label-self"]').textContent =
+      isSheet ? '以前の自分の髪型' : '切ったあと（仕上がり）';
+
     var any = false;
-    ['ref', 'self'].forEach(function (kind) {
+    ['ref', 'before', 'self'].forEach(function (kind) {
       var list = photosOf(o.id, kind);
       if (!list.length) return;
       any = true;
@@ -2030,8 +2037,11 @@
     document.getElementById('sheet-form-title').textContent = editId ? '注文シートを編集' : '新しい注文シート';
     fillDatalists();
 
-    // 注文シートでの「自分の写真」は仕上がりではなく、いまの髪型を見せるためのもの
+    // 注文シートでの「自分の写真」は仕上がりではなく、いまの髪型を見せるためのもの。
+    // 「切る前」はカルテだけの項目なので、シートからは外す
     form.querySelector('.photo-editor[data-kind="self"] .sub').textContent = '以前の自分の髪型';
+    var beforeBox = form.querySelector('.photo-editor[data-kind="before"]');
+    if (beforeBox) beforeBox.remove();
 
     if (base) {
       form.elements.name.value = base.name || '';

@@ -356,6 +356,19 @@
               </label>
             </div>
           </div>
+          <div class="photo-editor" data-kind="before">
+            <h4 class="sub">切る前の写真</h4>
+            <div class="thumbs thumbs--edit dropzone" data-slot-photos="before"></div>
+            <div class="photo-acts">
+              <label class="btn btn--upload">
+                画像を選ぶ / 撮影
+                <input type="file" accept="image/*" multiple hidden data-upload="before">
+              </label>
+              <button class="btn" type="button" data-action="paste-photo" data-kind="before">
+                <svg class="ico" aria-hidden="true"><use href="#i-paste"></use></svg>画像を貼り付け
+              </button>
+            </div>
+          </div>
           <div class="photo-editor" data-kind="self">
             <h4 class="sub">自分の写真（仕上がり）</h4>
             <div class="thumbs thumbs--edit dropzone" data-slot-photos="self"></div>
@@ -370,7 +383,7 @@
             </div>
           </div>
         </div>
-        <p class="hint">「モデルを探す」でヘアカタログのサイトを開けます。気に入った写真をコピーして「画像を貼り付け」で登録できます（自分で撮った写真は「画像を選ぶ」から）。写真ごとに「向きを選ぶ」で前・後ろ・横などを付けられ、「顔を隠す」でモザイク・ぼかし・ぬりつぶしができます。</p>
+        <p class="hint">「モデルを探す」でヘアカタログのサイトを開けます。気に入った写真をコピーして「画像を貼り付け」で登録できます（自分で撮った写真は「画像を選ぶ / 撮影」から）。「切る前」は美容室に入る前に撮っておくと、仕上がりと見比べられます。写真ごとに「向きを選ぶ」で前・後ろ・横などを付けられ、「顔を隠す」でモザイク・ぼかし・ぬりつぶしができます。</p>
       </fieldset>
 </template>
 
@@ -618,8 +631,12 @@
           <h3 class="showgroup__label">こうしたい（参考の写真）</h3>
           <div class="thumbs thumbs--show" data-f="photos-ref"></div>
         </div>
+        <div class="showgroup" data-f="group-before" hidden>
+          <h3 class="showgroup__label" data-f="label-before">切る前</h3>
+          <div class="thumbs thumbs--show" data-f="photos-before"></div>
+        </div>
         <div class="showgroup" data-f="group-self" hidden>
-          <h3 class="showgroup__label">以前の自分の髪型</h3>
+          <h3 class="showgroup__label" data-f="label-self">以前の自分の髪型</h3>
           <div class="thumbs thumbs--show" data-f="photos-self"></div>
         </div>
       </section>
@@ -662,8 +679,12 @@
           <h3 class="showgroup__label">こうしたい（参考の写真）</h3>
           <div class="thumbs thumbs--show" data-f="photos-ref"></div>
         </div>
+        <div class="showgroup" data-f="group-before" hidden>
+          <h3 class="showgroup__label" data-f="label-before">切る前</h3>
+          <div class="thumbs thumbs--show" data-f="photos-before"></div>
+        </div>
         <div class="showgroup" data-f="group-self" hidden>
-          <h3 class="showgroup__label">以前の自分の髪型</h3>
+          <h3 class="showgroup__label" data-f="label-self">以前の自分の髪型</h3>
           <div class="thumbs thumbs--show" data-f="photos-self"></div>
         </div>
       </section>
@@ -975,7 +996,11 @@
           <div class="thumbs" data-f="photos-ref"></div>
         </div>
         <div class="photogroup">
-          <h4 class="photogroup__label">自分</h4>
+          <h4 class="photogroup__label">切る前</h4>
+          <div class="thumbs" data-f="photos-before"></div>
+        </div>
+        <div class="photogroup">
+          <h4 class="photogroup__label">切ったあと（仕上がり）</h4>
           <div class="thumbs" data-f="photos-self"></div>
         </div>
       </section>
